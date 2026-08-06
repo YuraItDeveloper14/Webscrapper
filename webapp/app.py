@@ -141,6 +141,18 @@ def index():
     )
 
 
+@app.route("/map")
+def map_removed():
+    # The map page was removed; forward old bookmarks to the register.
+    return redirect(url_for("index"))
+
+
+@app.errorhandler(404)
+def _not_found(_e):
+    # Single-page tool: any unknown URL just goes home instead of a raw 404.
+    return redirect(url_for("index"))
+
+
 # How many businesses to pull per city — fixed so the user never picks a limit.
 SCRAPE_MAX_PER_CITY = 250
 
