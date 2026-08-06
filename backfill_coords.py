@@ -6,7 +6,8 @@ batches (cheap — a few queries for hundreds of ids), and updates the DB.
 import re
 import time
 import httpx
-from leadgen.db import connect
+from sqlalchemy import text
+from leadgen.db import connect, set_coords
 
 HEADERS = {"User-Agent": "leadgen/1.0 backfill (contact via project owner)"}
 ENDPOINTS = [
@@ -32,9 +33,10 @@ def overpass(query):
 
 def main():
     with connect() as c:
-        rows = c.execute(
-            "SELECT id, maps_url FROM leads WHERE (lat IS NULL OR lon IS NULL) AND maps_url LIKE '%openstreetmap.org/%'"
-        ).fetchall()
+        rows = c.execute(text(
+            "SELECT id, maps_url FROM leads WHERE (lat IS NULL OR lon IS NULL) "
+            "AND maps_url LIKE '%openstreetmap.org/%'"
+        )).mappings().all()
     print("to backfill:", len(rows))
 
     by_type = {"node": {}, "way": {}, "relation": {}}
@@ -56,7 +58,7 @@ def main():
                     lon = el.get("lon") or el.get("center", {}).get("lon")
                     lead_id = idmap.get(el.get("id"))
                     if lat and lon and lead_id:
-                        c.execute("UPDATE leads SET lat=?, lon=? WHERE id=?", (lat, lon, lead_id))
+                        set_coords(c, lead_id, lat, lon)
                         updated += 1
             print(f"  {typ}: chunk {i//250 + 1}, updated so far {updated}")
             time.sleep(1)

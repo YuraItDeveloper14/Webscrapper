@@ -1,221 +1,231 @@
-"""SQLite storage for scraped leads.
+"""Lead storage — one `leads` table, works on SQLite (local) and Postgres (prod).
 
-One table `leads`, keyed by a normalized business identity so re-running the
-scraper is idempotent (no duplicate rows for the same business).
+Backend is chosen by the DATABASE_URL env var: when set (e.g. Render Postgres)
+we use it, otherwise a local SQLite file. All queries go through SQLAlchemy Core
+so the same code emits correct SQL for either dialect.
 """
 from __future__ import annotations
 
-import sqlite3
+import os
 import csv
 from pathlib import Path
 from contextlib import contextmanager
 
+from sqlalchemy import (create_engine, MetaData, Table, Column, Integer, Float,
+                        Text, DateTime, Index, select, insert, update, func,
+                        or_, and_, case, distinct, text)
+
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "leads.db"
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS leads (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT,
-    website     TEXT,
-    email       TEXT,
-    phone       TEXT,
-    address     TEXT,
-    category    TEXT,
-    rating      TEXT,
-    query       TEXT,               -- the search that found this lead
-    maps_url    TEXT UNIQUE,        -- stable identity for dedup (OSM url)
-    email_status TEXT DEFAULT 'new',-- new | contacted | called | replied | bounced | skip
-    lat         REAL,
-    lon         REAL,
-    country     TEXT,
-    region      TEXT,               -- oblast / voivodeship / state
-    city        TEXT,
-    notes       TEXT,               -- free notes (e.g. cold-call outcome)
-    created_at  TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
-CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(email_status);
-"""
 
-# Indexes on columns that may be added by migration — created after _migrate.
-POST_MIGRATE = "CREATE INDEX IF NOT EXISTS idx_leads_country ON leads(country);"
-
-# Columns added after the first release — backfilled onto existing DBs.
-_ADDED_COLUMNS = {
-    "lat": "REAL", "lon": "REAL", "country": "TEXT", "region": "TEXT",
-    "city": "TEXT", "notes": "TEXT",
-    "site_ok": "INTEGER", "mobile": "INTEGER",  # live site signals (1/0/NULL)
-}
+def _engine_url() -> str:
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if url:
+        # Render/Heroku hand out postgres:// — SQLAlchemy 2.x wants the driver spelled out.
+        if url.startswith("postgres://"):
+            url = "postgresql+psycopg://" + url[len("postgres://"):]
+        elif url.startswith("postgresql://") and "+psycopg" not in url:
+            url = "postgresql+psycopg://" + url[len("postgresql://"):]
+        return url
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{DB_PATH}"
 
 
-def _migrate(conn: sqlite3.Connection) -> None:
-    have = {r[1] for r in conn.execute("PRAGMA table_info(leads)").fetchall()}
+ENGINE = create_engine(_engine_url(), future=True, pool_pre_ping=True)
+IS_SQLITE = ENGINE.dialect.name == "sqlite"
+
+_meta = MetaData()
+LEADS = Table(
+    "leads", _meta,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("name", Text), Column("website", Text), Column("email", Text),
+    Column("phone", Text), Column("address", Text), Column("category", Text),
+    Column("rating", Text), Column("query", Text),
+    Column("maps_url", Text, unique=True),
+    Column("email_status", Text, default="new"),
+    Column("lat", Float), Column("lon", Float),
+    Column("country", Text), Column("region", Text), Column("city", Text),
+    Column("notes", Text),
+    Column("site_ok", Integer), Column("mobile", Integer),
+    Column("created_at", DateTime, server_default=func.now()),
+    Index("idx_leads_email", "email"),
+    Index("idx_leads_status", "email_status"),
+    Index("idx_leads_country", "country"),
+)
+
+VALID_STATUSES = ("new", "contacted", "called", "replied", "bounced", "skip")
+_LEAD_COLS = ("name", "website", "email", "phone", "address", "category", "rating",
+              "query", "maps_url", "lat", "lon", "country", "region", "city",
+              "site_ok", "mobile")
+
+# Columns added to the SQLite file after its first release (Postgres is created fresh).
+_ADDED_COLUMNS = {"lat": "REAL", "lon": "REAL", "country": "TEXT", "region": "TEXT",
+                  "city": "TEXT", "notes": "TEXT", "site_ok": "INTEGER", "mobile": "INTEGER"}
+
+
+def _migrate_sqlite(conn) -> None:
+    have = {r[1] for r in conn.execute(text("PRAGMA table_info(leads)"))}
     for col, decl in _ADDED_COLUMNS.items():
         if col not in have:
-            conn.execute(f"ALTER TABLE leads ADD COLUMN {col} {decl}")
+            conn.execute(text(f"ALTER TABLE leads ADD COLUMN {col} {decl}"))
+
+
+def init_db() -> None:
+    _meta.create_all(ENGINE)
+    if IS_SQLITE:
+        with ENGINE.begin() as conn:
+            _migrate_sqlite(conn)
+
+
+init_db()
 
 
 @contextmanager
-def connect(db_path: Path = DB_PATH):
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        conn.executescript(SCHEMA)
-        _migrate(conn)
-        conn.executescript(POST_MIGRATE)
+def connect():
+    """Yield a transactional SQLAlchemy connection (commits on clean exit)."""
+    with ENGINE.begin() as conn:
         yield conn
-        conn.commit()
-    finally:
-        conn.close()
 
 
-def upsert_lead(conn: sqlite3.Connection, lead: dict) -> bool:
-    """Insert a lead, or fill in missing fields on an existing one.
+def upsert_lead(conn, lead: dict) -> bool:
+    """Insert a lead, or backfill missing fields on an existing one.
 
-    Returns True if a new row was inserted, False if it already existed.
-    Identity is `maps_url` when present, otherwise (name, address).
+    Returns True if a new row was inserted. Identity is `maps_url` when present,
+    otherwise (name, address).
     """
-    cur = conn.execute(
-        "SELECT id, email, website FROM leads WHERE maps_url = ? OR (maps_url IS NULL AND name = ? AND address = ?)",
-        (lead.get("maps_url"), lead.get("name"), lead.get("address")),
+    sel = select(LEADS.c.id, LEADS.c.email, LEADS.c.website).where(
+        or_(LEADS.c.maps_url == lead.get("maps_url"),
+            and_(LEADS.c.maps_url.is_(None),
+                 LEADS.c.name == lead.get("name"),
+                 LEADS.c.address == lead.get("address")))
     )
-    row = cur.fetchone()
+    row = conn.execute(sel).first()
     if row is None:
-        cols = ("name", "website", "email", "phone", "address", "category", "rating",
-                "query", "maps_url", "lat", "lon", "country", "region", "city",
-                "site_ok", "mobile")
-        conn.execute(
-            f"INSERT INTO leads ({', '.join(cols)}) VALUES ({', '.join(':' + c for c in cols)})",
-            {c: lead.get(c) for c in cols},
-        )
+        conn.execute(insert(LEADS).values({c: lead.get(c) for c in _LEAD_COLS}))
         return True
-    # Backfill email/website/signals if we learned them this run.
-    updates, params = [], []
-    if not row["email"] and lead.get("email"):
-        updates.append("email = ?"); params.append(lead["email"])
-    if not row["website"] and lead.get("website"):
-        updates.append("website = ?"); params.append(lead["website"])
+    vals = {}
+    if not row.email and lead.get("email"):
+        vals["email"] = lead["email"]
+    if not row.website and lead.get("website"):
+        vals["website"] = lead["website"]
     for sig in ("site_ok", "mobile"):
         if lead.get(sig) is not None:
-            updates.append(f"{sig} = ?"); params.append(lead[sig])
-    if updates:
-        params.append(row["id"])
-        conn.execute(f"UPDATE leads SET {', '.join(updates)} WHERE id = ?", params)
+            vals[sig] = lead[sig]
+    if vals:
+        conn.execute(update(LEADS).where(LEADS.c.id == row.id).values(**vals))
     return False
 
 
-def export_csv(out_path: Path, only_with_email: bool = True, dedupe_email: bool = True,
-               db_path: Path = DB_PATH) -> int:
-    """Dump leads to CSV. Returns number of rows written.
-
-    dedupe_email collapses rows that share an email (e.g. chain branches) to one.
-    """
-    with connect(db_path) as conn:
-        q = "SELECT name, email, phone, website, address, category, rating, email_status FROM leads"
-        if only_with_email:
-            q += " WHERE email IS NOT NULL AND email != ''"
-        if dedupe_email:
-            q += " GROUP BY LOWER(email)" if only_with_email else \
-                 " GROUP BY COALESCE(NULLIF(LOWER(email),''), maps_url)"
-        q += " ORDER BY name"
-        rows = conn.execute(q).fetchall()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        writer.writerow(["name", "email", "phone", "website", "address", "category", "rating", "status"])
-        for r in rows:
-            writer.writerow([r[k] for k in r.keys()])
-    return len(rows)
-
-
-VALID_STATUSES = ("new", "contacted", "called", "replied", "bounced", "skip")
+def set_coords(conn, lead_id: int, lat: float, lon: float) -> None:
+    conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(lat=lat, lon=lon))
 
 
 def query_leads(search: str = "", category: str = "", status: str = "",
                 has_email: str = "", country: str = "", region: str = "",
-                limit: int = 1000, db_path: Path = DB_PATH) -> list[dict]:
-    """Filtered lead list for the web panel."""
-    where, params = [], []
+                limit: int = 1000) -> list[dict]:
+    conds = []
     if search:
-        where.append("(name LIKE ? OR email LIKE ? OR address LIKE ?)")
-        params += [f"%{search}%"] * 3
+        like = f"%{search}%"
+        conds.append(or_(LEADS.c.name.ilike(like), LEADS.c.email.ilike(like),
+                         LEADS.c.address.ilike(like)))
     if category:
-        where.append("category = ?"); params.append(category)
+        conds.append(LEADS.c.category == category)
     if status:
-        where.append("email_status = ?"); params.append(status)
+        conds.append(LEADS.c.email_status == status)
     if country:
-        where.append("country = ?"); params.append(country)
+        conds.append(LEADS.c.country == country)
     if region:
-        where.append("region = ?"); params.append(region)
+        conds.append(LEADS.c.region == region)
     if has_email == "yes":
-        where.append("email IS NOT NULL AND email != ''")
+        conds.append(and_(LEADS.c.email.is_not(None), LEADS.c.email != ""))
     elif has_email == "no":
-        where.append("(email IS NULL OR email = '')")
-    clause = (" WHERE " + " AND ".join(where)) if where else ""
-    with connect(db_path) as conn:
-        rows = conn.execute(
-            f"SELECT * FROM leads{clause} ORDER BY (email IS NULL OR email=''), name LIMIT ?",
-            params + [limit],
-        ).fetchall()
-    return [dict(r) for r in rows]
+        conds.append(or_(LEADS.c.email.is_(None), LEADS.c.email == ""))
+    stmt = (select(LEADS).where(and_(*conds)) if conds else select(LEADS))
+    stmt = stmt.order_by(case((or_(LEADS.c.email.is_(None), LEADS.c.email == ""), 1),
+                              else_=0), LEADS.c.name).limit(limit)
+    with connect() as conn:
+        return [dict(r) for r in conn.execute(stmt).mappings().all()]
 
 
-def set_status_bulk(ids: list[int], status: str, db_path: Path = DB_PATH) -> int:
-    if status not in VALID_STATUSES or not ids:
-        return 0
-    with connect(db_path) as conn:
-        conn.executemany("UPDATE leads SET email_status = ? WHERE id = ?",
-                         [(status, i) for i in ids])
-    return len(ids)
-
-
-def distinct_col(col: str, db_path: Path = DB_PATH) -> list[str]:
-    if col not in ("country", "region", "city", "category"):
-        return []
-    with connect(db_path) as conn:
-        rows = conn.execute(
-            f"SELECT DISTINCT {col} FROM leads WHERE {col} IS NOT NULL AND {col} != '' ORDER BY {col}"
-        ).fetchall()
-    return [r[0] for r in rows]
-
-
-def set_status(lead_id: int, status: str, db_path: Path = DB_PATH) -> bool:
+def set_status(lead_id: int, status: str) -> bool:
     if status not in VALID_STATUSES:
         return False
-    with connect(db_path) as conn:
-        conn.execute("UPDATE leads SET email_status = ? WHERE id = ?", (status, lead_id))
+    with connect() as conn:
+        conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(email_status=status))
     return True
 
 
-def distinct_categories(db_path: Path = DB_PATH) -> list[str]:
-    with connect(db_path) as conn:
-        rows = conn.execute(
-            "SELECT DISTINCT category FROM leads WHERE category != '' ORDER BY category"
-        ).fetchall()
-    return [r[0] for r in rows]
+def set_status_bulk(ids: list[int], status: str) -> int:
+    if status not in VALID_STATUSES or not ids:
+        return 0
+    with connect() as conn:
+        conn.execute(update(LEADS).where(LEADS.c.id.in_(ids)).values(email_status=status))
+    return len(ids)
 
 
-def prospect_count(db_path: Path = DB_PATH) -> int:
-    """Leads with a missing or weak website (the best sales prospects)."""
-    from leadgen.score import PROSPECT_SQL
-    with connect(db_path) as conn:
-        return conn.execute(f"SELECT COUNT(*) FROM leads WHERE {PROSPECT_SQL}").fetchone()[0]
+def distinct_col(col: str) -> list[str]:
+    if col not in ("country", "region", "city", "category"):
+        return []
+    c = getattr(LEADS.c, col)
+    stmt = select(distinct(c)).where(and_(c.is_not(None), c != "")).order_by(c)
+    with connect() as conn:
+        return [r[0] for r in conn.execute(stmt)]
 
 
-def status_counts(db_path: Path = DB_PATH) -> dict:
-    with connect(db_path) as conn:
-        rows = conn.execute(
-            "SELECT email_status, COUNT(*) c FROM leads GROUP BY email_status"
-        ).fetchall()
-    return {r[0]: r[1] for r in rows}
+def distinct_categories() -> list[str]:
+    return distinct_col("category")
 
 
-def stats(db_path: Path = DB_PATH) -> dict:
-    with connect(db_path) as conn:
-        total = conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
-        with_email = conn.execute(
-            "SELECT COUNT(*) FROM leads WHERE email IS NOT NULL AND email != ''").fetchone()[0]
-        with_site = conn.execute(
-            "SELECT COUNT(*) FROM leads WHERE website IS NOT NULL AND website != ''").fetchone()[0]
-    return {"total": total, "with_email": with_email, "with_website": with_site}
+def _prospect_condition():
+    from leadgen.score import SOCIAL, AGGREGATORS
+    weak = [LEADS.c.website.is_(None), LEADS.c.website == "",
+            LEADS.c.website.ilike("http://%")]
+    for token in (*SOCIAL, *AGGREGATORS):
+        weak.append(LEADS.c.website.ilike(f"%{token}%"))
+    return or_(*weak)
+
+
+def prospect_count() -> int:
+    with connect() as conn:
+        return conn.execute(select(func.count()).where(_prospect_condition())).scalar_one()
+
+
+def status_counts() -> dict:
+    stmt = select(LEADS.c.email_status, func.count()).group_by(LEADS.c.email_status)
+    with connect() as conn:
+        return {r[0]: r[1] for r in conn.execute(stmt)}
+
+
+def stats() -> dict:
+    has_email = case((and_(LEADS.c.email.is_not(None), LEADS.c.email != ""), 1), else_=0)
+    has_site = case((and_(LEADS.c.website.is_not(None), LEADS.c.website != ""), 1), else_=0)
+    stmt = select(func.count(), func.coalesce(func.sum(has_email), 0),
+                  func.coalesce(func.sum(has_site), 0))
+    with connect() as conn:
+        total, with_email, with_site = conn.execute(stmt).first()
+    return {"total": total, "with_email": int(with_email), "with_website": int(with_site)}
+
+
+def export_csv(out_path: Path, only_with_email: bool = True, dedupe_email: bool = True) -> int:
+    """Dump leads to CSV (dedupe by email). Returns rows written."""
+    cols = ["name", "email", "phone", "website", "address", "category", "rating", "email_status"]
+    stmt = select(*[getattr(LEADS.c, c) for c in cols])
+    if only_with_email:
+        stmt = stmt.where(and_(LEADS.c.email.is_not(None), LEADS.c.email != ""))
+    stmt = stmt.order_by(LEADS.c.name)
+    with connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    seen, out = set(), []
+    for r in rows:
+        key = (r["email"] or "").lower()
+        if dedupe_email and key and key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["name", "email", "phone", "website", "address", "category", "rating", "status"])
+        for r in out:
+            w.writerow([r[c] for c in cols])
+    return len(out)

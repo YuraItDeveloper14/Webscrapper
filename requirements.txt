@@ -3,3 +3,5 @@ httpx==0.27.2
 selectolax==0.3.21
 tenacity==9.0.0
 waitress==3.0.0
+SQLAlchemy==2.0.35
+psycopg[binary]==3.2.3
