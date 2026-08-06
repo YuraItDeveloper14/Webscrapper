@@ -16,8 +16,14 @@
     padding-bottom:6px;margin-bottom:2px}
   .cities input{width:auto} input[type=checkbox]{accent-color:var(--ink);cursor:pointer;width:16px;height:16px}
 
-  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 19px 0}
-  .reg-count{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .reg-top{display:flex;align-items:center;gap:14px;padding:16px 19px 0}
+  .reg-count{font-size:13px;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  .qs{position:relative;flex:1;max-width:360px;margin:0}
+  .qs input{width:100%;padding:9px 32px 9px 13px;border-radius:999px;font-size:13.5px}
+  .qs-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);
+    font-size:13px;font-weight:700}
+  .qs-x:hover{color:var(--ink)}
+  .reg-top > .btn{margin-left:auto}
   .bulkbar{display:none;align-items:center;gap:10px;margin:14px 19px 0;padding:11px 14px;
     background:var(--sunk2);border:1px solid var(--border-strong);border-radius:11px;font-size:13.5px}
   .bulkbar.show{display:flex} .bulkbar b{color:var(--ink)}
@@ -116,26 +122,6 @@
         </div>
       </div>
     </div>
-    <div class="panel">
-      <div class="panel-h"><h2>Точний фільтр</h2><div class="sub">Звузити список пошуком чи категорією.</div></div>
-      <div class="panel-b">
-        <form method="get" action="{{ url_for('index') }}">
-          <input type="hidden" name="opp" value="{{ opp }}"><input type="hidden" name="status" value="{{ filters.status }}">
-          <label>Пошук за назвою або email</label>
-          <input name="search" value="{{ filters.search }}" placeholder="напр. кав'ярня">
-          <div class="two">
-            <div><label>Регіон</label><select name="region"><option value="">усі</option>
-              {% for r in regions_filter %}<option value="{{ r }}" {{ 'selected' if r==filters.region }}>{{ r }}</option>{% endfor %}</select></div>
-            <div><label>Категорія</label><select name="category"><option value="">усі</option>
-              {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c==filters.category }}>{{ c }}</option>{% endfor %}</select></div>
-          </div>
-          <div class="row" style="margin-top:15px">
-            <button class="btn sm" type="submit">Застосувати</button>
-            <a class="btn ghost sm" href="{{ url_for('index') }}">Скинути</a>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 
   <div class="panel">
@@ -148,6 +134,11 @@
     </div>
     <div class="reg-top">
       <div class="reg-count">{{ leads|length }} у списку</div>
+      <form method="get" action="{{ url_for('index') }}" class="qs">
+        <input type="hidden" name="opp" value="{{ opp }}"><input type="hidden" name="status" value="{{ filters.status }}">
+        <input name="search" value="{{ filters.search }}" placeholder="пошук за назвою або email…">
+        {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}" title="очистити">✕</a>{% endif %}
+      </form>
       <a class="btn ghost sm" href="{{ url_for('export', **filters) }}">Експорт у Excel</a>
     </div>
     <div class="bulkbar" id="bulkbar"><b id="bulkCount">0</b> обрано ·
