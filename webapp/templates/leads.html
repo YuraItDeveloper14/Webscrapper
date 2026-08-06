@@ -1,162 +1,201 @@
 {% extends "base.html" %}
-{% block title %}leadgen · реєстр{% endblock %}
+{% block title %}leadgen{% endblock %}
+{% set LBL = {'new':'новий','target':'в роботі','called':'подзвонив','client':'клієнт','no':'відмова'} %}
+{% block style %}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text-soft);
+    font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--orange);color:var(--orange)}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .chip .n{font-size:12px;opacity:.8}
+  .cities{display:flex;flex-direction:column;gap:2px;max-height:170px;overflow:auto;
+    border:1px solid var(--border);border-radius:9px;padding:8px 10px;background:var(--sunk)}
+  .cities label{margin:0;display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);
+    font-weight:400;cursor:pointer;padding:2px 0}
+  .cities .all{font-weight:600;color:var(--text-soft);border-bottom:1px solid var(--border);
+    padding-bottom:6px;margin-bottom:2px}
+  .cities input{width:auto} input[type=checkbox]{accent-color:var(--orange);cursor:pointer}
+
+  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px 0}
+  .reg-count{font-size:13px;color:var(--text-soft);font-weight:500}
+  .bulkbar{display:none;align-items:center;gap:11px;margin:14px 18px 0;padding:11px 14px;
+    background:var(--orange-bg);border:1px solid #f6d3bd;border-radius:10px;font-size:13.5px}
+  .bulkbar.show{display:flex}
+  .bulkbar b{color:var(--orange-hover)}
+  .scroll{overflow-x:auto;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--text-faint);text-align:left;padding:10px 14px;border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th.nos{cursor:default}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:hover td{background:var(--sunk)}
+  .chk{width:36px;text-align:center;cursor:default}
+  .nm{font-weight:600;color:var(--text)}
+  .em a{color:var(--green);font-weight:600} .em .none{color:var(--text-faint)}
+  .ph a{color:var(--text-soft);font-weight:500;white-space:nowrap} .ph .none{color:var(--text-faint)}
+  .cp{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;padding:0 4px;
+    opacity:0;transition:.12s} tr:hover .cp{opacity:1} .cp:hover{color:var(--orange)}
+  .cat{display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:500;
+    background:var(--surface-2);color:var(--text-soft)}
+  .maps{color:var(--blue);font-weight:600;font-size:13px}
+  .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
+  .opp.hot{background:var(--red-bg);color:var(--red)}
+  .opp.warm{background:var(--amber-bg);color:var(--amber)}
+  .opp.cold{background:var(--green-bg);color:#15803d}
+  .opp-angle{display:block;font-size:11px;color:var(--text-faint);margin-top:3px}
+  select.st{width:auto;padding:6px 26px 6px 10px;font-size:12.5px;font-weight:600;border-radius:7px}
+  select.st.st-new{color:var(--text-soft)}
+  select.st.st-target{color:var(--orange);border-color:var(--orange)}
+  select.st.st-called{color:var(--blue);border-color:var(--blue)}
+  select.st.st-client{color:var(--green);border-color:var(--green)}
+  select.st.st-no{color:var(--red);border-color:var(--red)}
+  .empty{padding:40px 22px;text-align:center;color:var(--text-soft)}
+  .empty h3{margin:0 0 8px;font-size:16px;color:var(--text)}
+  .empty p{margin:4px auto;max-width:440px;font-size:13.5px;line-height:1.6}
+  .log{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+  .job{font-size:12.5px;padding:9px 11px;border-radius:9px;border:1px solid var(--border-strong);
+    background:var(--sunk);color:var(--text-soft)}
+  .job.running{border-color:var(--amber);background:var(--amber-bg);color:#92600a}
+  .job.done{border-color:var(--green);background:var(--green-bg);color:#166534}
+  .job.error{border-color:var(--red);background:var(--red-bg);color:#991b1b}
+{% endblock %}
 {% block body %}
 <div class="split">
 
-  <!-- LEFT: collection instrument + filters -->
+  <!-- LEFT: collection -->
   <div>
     <div class="panel">
-      <div class="panel-h"><h2>Збір з мапи</h2></div>
+      <div class="panel-h">
+        <h2>Знайти нових клієнтів</h2>
+        <div class="sub">Обери місто й тип бізнесу — я зберу заклади з мапи та знайду їхні контакти.</div>
+      </div>
       <div class="panel-b">
-        <form method="post" action="{{ url_for('scrape') }}" id="scrapeForm">
+        <form method="post" action="{{ url_for('scrape') }}">
           <label>Країна</label>
           <select name="country" id="country">
-            {% for name, meta in geo.items() %}<option value="{{ name }}">{{ meta.flag }} {{ name }}</option>{% endfor %}
+            {% for name, meta in geo.items() %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
           </select>
-          <label>Регіон</label>
+          <label>Регіон / область</label>
           <select id="region"></select>
           <label>Міста <span class="hint" id="cityHint"></span></label>
           <div class="cities" id="cities"></div>
-          <label>Або впиши свої міста (по одному в рядку)</label>
-          <textarea name="manual" rows="2" placeholder="напр. Bruges&#10;Porto"></textarea>
-          <label>Категорія</label>
+          <label>Тип бізнесу</label>
           <select name="category">
             {% for c in osm_categories %}<option value="{{ c }}" {{ 'selected' if c=='cafe' }}>{{ c }}</option>{% endfor %}
           </select>
-          <label>Ліміт на місто</label>
-          <input class="num" type="number" name="max" value="150" min="1" max="500">
-          <div style="margin-top:15px"><button class="btn" type="submit">Запустити збір</button></div>
+          <div style="margin-top:16px"><button class="btn" type="submit">Зібрати клієнтів</button></div>
         </form>
         <div class="log" id="jobs">
           {% for j in jobs %}
-            <div class="job {{ j.state }}"><span class="id">#{{ j.id }}</span> {{ j.label }} —
+            <div class="job {{ j.state }}">{{ j.label }} —
               {% if j.state=='running' %}збираю, знайдено {{ j.found }}
-              {% elif j.state=='done' %}+{{ j.added }} нових · {{ j.with_email }} з email
-              {% else %}збій: {{ j.error }}{% endif %}
-            </div>
+              {% elif j.state=='done' %}готово: +{{ j.added }} нових, {{ j.with_email }} з email
+              {% else %}помилка: {{ j.error }}{% endif %}</div>
           {% endfor %}
         </div>
       </div>
     </div>
 
     <div class="panel">
-      <div class="panel-h"><h2>Фільтр реєстру</h2></div>
+      <div class="panel-h">
+        <h2>Точний фільтр</h2>
+        <div class="sub">Звузити список за пошуком, містом, категорією чи статусом дзвінка.</div>
+      </div>
       <div class="panel-b">
         <form method="get" action="{{ url_for('index') }}">
-          <label>Пошук</label>
-          <input name="search" value="{{ filters.search }}" placeholder="назва, email або адреса">
+          <input type="hidden" name="opp" value="{{ opp }}">
+          <label>Пошук за назвою або email</label>
+          <input name="search" value="{{ filters.search }}" placeholder="напр. кав'ярня">
           <div class="two">
-            <div><label>Країна</label>
-              <select name="country"><option value="">усі</option>
-                {% for c in countries_filter %}<option value="{{ c }}" {{ 'selected' if c==filters.country }}>{{ c }}</option>{% endfor %}
-              </select></div>
             <div><label>Регіон</label>
               <select name="region"><option value="">усі</option>
                 {% for r in regions_filter %}<option value="{{ r }}" {{ 'selected' if r==filters.region }}>{{ r }}</option>{% endfor %}
               </select></div>
-          </div>
-          <div class="two">
             <div><label>Категорія</label>
               <select name="category"><option value="">усі</option>
                 {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c==filters.category }}>{{ c }}</option>{% endfor %}
               </select></div>
-            <div><label>Статус</label>
-              <select name="status"><option value="">усі</option>
-                {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==filters.status }}>{{ s }}</option>{% endfor %}
-              </select></div>
           </div>
-          <div class="two">
-            <div><label>Email</label>
-              <select name="has_email">
-                <option value="" {{ 'selected' if filters.has_email=='' }}>байдуже</option>
-                <option value="yes" {{ 'selected' if filters.has_email=='yes' }}>лише з email</option>
-                <option value="no" {{ 'selected' if filters.has_email=='no' }}>без email</option>
-              </select></div>
-            <div><label>Можливість</label>
-              <select name="opp">
-                <option value="" {{ 'selected' if opp=='' }}>усі</option>
-                <option value="hot" {{ 'selected' if opp=='hot' }}>🔥 гарячі</option>
-                <option value="weak" {{ 'selected' if opp=='weak' }}>слабкий/нема сайту</option>
-                <option value="nosite" {{ 'selected' if opp=='nosite' }}>зовсім без сайту</option>
-              </select></div>
-          </div>
+          <label>Статус дзвінка</label>
+          <select name="status"><option value="">усі</option>
+            {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==filters.status }}>{{ LBL[s] }}</option>{% endfor %}
+          </select>
           <div class="row" style="margin-top:15px">
-            <button class="btn" type="submit">Застосувати</button>
-            <a class="btn ghost" href="{{ url_for('index') }}">Скинути</a>
+            <button class="btn sm" type="submit">Застосувати</button>
+            <a class="btn ghost sm" href="{{ url_for('index') }}">Скинути</a>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: leads register -->
+  <!-- RIGHT: register -->
   <div class="panel">
     <div class="reg-top">
-      <div class="reg-count">
-        {{ leads|length }} записів
-        {% for s,c in status_counts.items() %}<span class="tick">{{ s }} · {{ c }}</span>{% endfor %}
+      <div class="reg-count">{{ leads|length }} бізнесів у списку</div>
+      <a class="btn ghost sm" href="{{ url_for('export', **filters) }}">Експорт у Excel</a>
+    </div>
+
+    <div style="padding:14px 18px 0">
+      <div class="chips">
+        <a class="chip {{ 'on' if opp=='weak' and not filters.status }}" href="{{ url_for('index', opp='weak') }}">Варті дзвінка <span class="n">потрібен сайт</span></a>
+        <a class="chip {{ 'on' if filters.status=='target' }}" href="{{ url_for('index', status='target') }}">Позначені в роботу</a>
+        <a class="chip {{ 'on' if filters.status=='called' }}" href="{{ url_for('index', status='called') }}">Вже дзвонив</a>
+        <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Усі</a>
       </div>
-      <a class="btn ghost" href="{{ url_for('export', **filters) }}">Експорт CSV</a>
     </div>
 
     <div class="bulkbar" id="bulkbar">
-      <span id="bulkCount">0 обрано</span>
-      <select id="bulkStatus" class="status">
-        {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-      </select>
-      <button class="btn" type="button" onclick="applyBulk()">Змінити статус</button>
-      <button class="btn ghost" type="button" onclick="clearSel()">Зняти вибір</button>
+      <b id="bulkCount">0</b> обрано ·
+      <button class="btn sm" type="button" onclick="bulk('target')">Позначити в роботу</button>
+      <button class="btn ghost sm" type="button" onclick="bulk('called')">Подзвонив</button>
+      <button class="btn ghost sm" type="button" onclick="bulk('no')">Відмова</button>
+      <button class="btn ghost sm" type="button" onclick="clearSel()">Зняти</button>
     </div>
 
     <div class="scroll">
     <table id="tbl">
       <thead><tr>
-        <th class="chk"><input type="checkbox" id="selAll" onclick="toggleAll(this)"></th>
-        <th data-k="name" onclick="sortBy(this)">Заклад ▾</th>
-        <th data-k="email" onclick="sortBy(this)">Email</th>
-        <th data-k="phone" onclick="sortBy(this)">Телефон</th>
-        <th data-k="opp" onclick="sortBy(this)">Шанс</th>
-        <th data-k="cat" onclick="sortBy(this)">Категорія</th>
-        <th data-k="city" onclick="sortBy(this)">Місто</th>
-        <th>Maps</th>
-        <th data-k="status" onclick="sortBy(this)">Статус</th>
+        <th class="chk nos"><input type="checkbox" id="selAll" onclick="toggleAll(this)"></th>
+        <th data-k="name">Заклад</th>
+        <th data-k="email">Email</th>
+        <th data-k="phone">Телефон</th>
+        <th data-k="opp">Шанс</th>
+        <th data-k="cat">Тип</th>
+        <th data-k="city">Місто</th>
+        <th class="nos">Мапа</th>
+        <th data-k="status">Статус</th>
       </tr></thead>
       <tbody>
       {% for l in leads %}
+        {% set o = opportunity(l) %}
         <tr data-id="{{ l.id }}">
-          <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onRowChk()"></td>
-          <td data-k="name">
-            <div class="name-cell">
-              <span class="pin {{ 'on' if l.email }}" aria-hidden="true"></span>
-              <span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span>
-            </div>
-          </td>
-          <td class="em" data-k="email">
-            {% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a>
-              <button class="cp" title="скопіювати" onclick="cp('{{ l.email }}',this)">⧉</button>
-            {% else %}<span class="none">—</span>{% endif %}
-          </td>
-          <td data-k="phone">
-            {% if l.phone %}<a class="ph" href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>
-              <button class="cp" title="скопіювати" onclick="cp('{{ l.phone }}',this)">⧉</button>
-            {% else %}<span class="ph none">—</span>{% endif %}
-          </td>
-          {% set o = opportunity(l) %}
+          <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onChk()"></td>
+          <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span></td>
+          <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
+          <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}">
-            <span class="opp {{ o.tier }}" title="{{ o.reasons|join(', ') }}">{{ '🔥' if o.tier=='hot' else '●' if o.tier=='warm' else '·' }} {{ o.score }}</span>
-            <div class="opp-why"><span class="opp-angle">{{ o.angle }}</span></div>
+            <span class="opp {{ o.tier }}" title="{{ o.reasons|join(', ') }}">{{ o.reasons[0] }}</span>
+            <span class="opp-angle">{{ o.angle }}</span>
           </td>
           <td data-k="cat">{% if l.category %}<span class="cat">{{ l.category }}</span>{% else %}—{% endif %}</td>
-          <td class="addr" data-k="city">{{ l.city or l.address or '—' }}</td>
-          <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener" title="відкрити в Google Maps">◎</a></td>
+          <td data-k="city">{{ l.city or l.address or '—' }}</td>
+          <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td data-k="status">
-            <select class="status" aria-label="статус" onchange="setStatus({{ l.id }}, this.value)">
-              {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==l.email_status }}>{{ s }}</option>{% endfor %}
+            <select class="st st-{{ l.email_status }}" aria-label="статус" onchange="setStatus({{ l.id }}, this)">
+              {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==l.email_status }}>{{ LBL[s] }}</option>{% endfor %}
             </select>
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="9" class="empty">Реєстр порожній. Ліворуч обери країну, регіон і міста — і запусти збір.</td></tr>
+        <tr><td colspan="9"><div class="empty">
+          <h3>Список поки порожній</h3>
+          <p><b>Лід</b> — це потенційний клієнт: бізнес, якому можна продати твої послуги (сайт, рекламу, AI-автоматизацію).</p>
+          <p>Ліворуч обери <b>країну → область → місто</b> і тип бізнесу, натисни <b>«Зібрати клієнтів»</b> — я знайду заклади на мапі та витягну їхні <b>email</b> (пошту для звернення) і телефони.</p>
+          <p>Потім тисни <b>«Варті дзвінка»</b> — покажу тих, у кого <b>немає сайту</b> (їм найлегше щось запропонувати).</p>
+        </div></td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -166,90 +205,50 @@
 
 <script>
 const GEO = {{ geo|tojson }};
+const countrySel=document.getElementById('country'), regionSel=document.getElementById('region'),
+      citiesBox=document.getElementById('cities'), cityHint=document.getElementById('cityHint');
+function fillRegions(){ const c=countrySel.value;
+  regionSel.innerHTML=Object.keys(GEO[c].regions).map(r=>`<option value="${r}">${r}</option>`).join(''); fillCities(); }
+function fillCities(){ const list=(GEO[countrySel.value].regions[regionSel.value]||[]);
+  citiesBox.innerHTML=`<label class="all"><input type="checkbox" onclick="allCities(this)"> усі міста регіону</label>`+
+    list.map(c=>`<label><input type="checkbox" name="cities" value="${c}"> ${c}</label>`).join('');
+  cityHint.textContent=`(${list.length})`; }
+function allCities(el){ citiesBox.querySelectorAll('input[name=cities]').forEach(i=>i.checked=el.checked); }
+countrySel.onchange=fillRegions; regionSel.onchange=fillCities; fillRegions();
 
-// ---- cascading country -> region -> cities ----
-const countrySel = document.getElementById('country');
-const regionSel = document.getElementById('region');
-const citiesBox = document.getElementById('cities');
-const cityHint = document.getElementById('cityHint');
-function fillRegions(){
-  const c = countrySel.value, regions = Object.keys(GEO[c].regions);
-  regionSel.innerHTML = regions.map(r=>`<option value="${r}">${r}</option>`).join('');
-  fillCities();
-}
-function fillCities(){
-  const c = countrySel.value, r = regionSel.value;
-  const list = (GEO[c].regions[r]||[]);
-  citiesBox.innerHTML =
-    `<label class="cityall"><input type="checkbox" id="cityAll" onclick="toggleCities(this)"> усі міста регіону</label>` +
-    list.map(city=>`<label class="citychk"><input type="checkbox" name="cities" value="${city}"> ${city}</label>`).join('');
-  cityHint.textContent = `(${list.length})`;
-}
-function toggleCities(el){ citiesBox.querySelectorAll('input[name=cities]').forEach(i=>i.checked=el.checked); }
-countrySel.onchange = fillRegions;
-regionSel.onchange = fillCities;
-fillRegions();
+function setStatus(id,sel){ sel.className='st st-'+sel.value;
+  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'status='+encodeURIComponent(sel.value)}); }
+function cp(t,b){ navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);}); }
 
-// ---- per-row status ----
-function setStatus(id, status){
-  fetch(`/lead/${id}/status`, {method:'POST',
-    headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'status='+encodeURIComponent(status)});
-}
-// ---- copy ----
-function cp(txt, btn){ navigator.clipboard.writeText(txt).then(()=>{
-  const o=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=o,900); }); }
+function sel(){ return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value); }
+function onChk(){ const n=sel().length; document.getElementById('bulkCount').textContent=n;
+  document.getElementById('bulkbar').classList.toggle('show',n>0); }
+function toggleAll(el){ document.querySelectorAll('.rowchk').forEach(c=>c.checked=el.checked); onChk(); }
+function clearSel(){ document.querySelectorAll('.rowchk,#selAll').forEach(c=>c.checked=false); onChk(); }
+async function bulk(status){ const ids=sel(); if(!ids.length)return;
+  const b=new URLSearchParams(); ids.forEach(i=>b.append('ids',i)); b.append('status',status);
+  await fetch('/leads/bulk-status',{method:'POST',body:b}); location.reload(); }
 
-// ---- selection + bulk ----
-function selected(){ return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value); }
-function onRowChk(){ const n=selected().length; const bar=document.getElementById('bulkbar');
-  document.getElementById('bulkCount').textContent = n+' обрано';
-  bar.classList.toggle('show', n>0); }
-function toggleAll(el){ document.querySelectorAll('.rowchk').forEach(c=>c.checked=el.checked); onRowChk(); }
-function clearSel(){ document.querySelectorAll('.rowchk,#selAll').forEach(c=>c.checked=false); onRowChk(); }
-async function applyBulk(){
-  const ids = selected(); if(!ids.length) return;
-  const body = new URLSearchParams(); ids.forEach(i=>body.append('ids',i));
-  body.append('status', document.getElementById('bulkStatus').value);
-  await fetch('/leads/bulk-status',{method:'POST',body});
-  location.reload();
-}
+let dir={};
+function sortBy(th){ const k=th.dataset.k; if(!k)return; const tb=document.querySelector('#tbl tbody');
+  const d=dir[k]=-(dir[k]||1); const rows=[...tb.querySelectorAll('tr')].filter(r=>r.dataset.id);
+  rows.sort((a,b)=>{ const ca=a.querySelector(`[data-k="${k}"]`),cb=b.querySelector(`[data-k="${k}"]`);
+    const sa=ca?.dataset.sort,sb=cb?.dataset.sort;
+    if(sa!==undefined&&sb!==undefined)return (Number(sa)-Number(sb))*d;
+    const av=(ca?.innerText||'').trim().toLowerCase(),bv=(cb?.innerText||'').trim().toLowerCase();
+    return av<bv?d:av>bv?-d:0; });
+  rows.forEach(r=>tb.appendChild(r)); }
+document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>sortBy(th));
 
-// ---- click-to-sort ----
-let sortDir = {};
-function sortBy(th){
-  const k = th.dataset.k, tb = document.querySelector('#tbl tbody');
-  const dir = sortDir[k] = -(sortDir[k]||1);
-  const rows = [...tb.querySelectorAll('tr')].filter(r=>r.dataset.id);
-  rows.sort((a,b)=>{
-    const ca=a.querySelector(`[data-k="${k}"]`), cb=b.querySelector(`[data-k="${k}"]`);
-    const sa=ca?.dataset.sort, sb=cb?.dataset.sort;
-    if(sa!==undefined && sb!==undefined){ return (Number(sa)-Number(sb))*dir; }
-    const av=(ca?.innerText||'').trim().toLowerCase();
-    const bv=(cb?.innerText||'').trim().toLowerCase();
-    return av<bv? dir : av>bv? -dir : 0;
-  });
-  rows.forEach(r=>tb.appendChild(r));
-  document.querySelectorAll('th[data-k]').forEach(h=>h.textContent=h.textContent.replace(/[ ▾▴]+$/,''));
-  th.textContent += dir>0?' ▾':' ▴';
-}
-
-// ---- live job log ----
-async function pollJobs(){
-  try{
-    const jobs = await (await fetch('/jobs.json')).json();
-    const box = document.getElementById('jobs');
-    if(box){ box.innerHTML = jobs.map(j=>{
-      const t = j.state==='running' ? `збираю, знайдено ${j.found}`
-              : j.state==='done' ? `+${j.added} нових · ${j.with_email} з email`
-              : `збій: ${j.error}`;
-      return `<div class="job ${j.state}"><span class="id">#${j.id}</span> ${j.label} — ${t}</div>`;
-    }).join(''); }
-    const running = jobs.some(j=>j.state==='running');
-    if(running){ window._hadRunning=true; setTimeout(pollJobs,2000); }
-    else if(window._hadRunning){ window._hadRunning=false; location.reload(); }
-  }catch(e){ setTimeout(pollJobs,4000); }
-}
+async function pollJobs(){ try{ const jobs=await (await fetch('/jobs.json')).json();
+  const box=document.getElementById('jobs');
+  if(box) box.innerHTML=jobs.map(j=>{ const t=j.state==='running'?`збираю, знайдено ${j.found}`
+    :j.state==='done'?`готово: +${j.added} нових, ${j.with_email} з email`:`помилка: ${j.error}`;
+    return `<div class="job ${j.state}">${j.label} — ${t}</div>`; }).join('');
+  const run=jobs.some(j=>j.state==='running');
+  if(run){window._had=true;setTimeout(pollJobs,2000);} else if(window._had){window._had=false;location.reload();}
+  }catch(e){setTimeout(pollJobs,4000);} }
 pollJobs();
 </script>
 {% endblock %}

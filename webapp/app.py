@@ -141,58 +141,27 @@ def index():
     )
 
 
-@app.route("/map")
-def map_view():
-    leads, filters, opp = _query_and_filter(request.args, limit=5000)
-    points = []
-    for l in leads:
-        if l.get("lat") is None or l.get("lon") is None:
-            continue
-        o = opportunity(l)
-        points.append({
-            "name": l["name"], "lat": l["lat"], "lon": l["lon"],
-            "email": l["email"] or "", "phone": l["phone"] or "",
-            "website": l["website"] or "", "city": l["city"] or "",
-            "cat": l["category"] or "", "tier": o["tier"], "score": o["score"],
-            "angle": o["angle"], "gmaps": gmaps_url(l),
-        })
-    return render_template(
-        "map.html",
-        points=points,
-        plotted=len(points),
-        total=len(leads),
-        filters=filters,
-        opp=opp,
-        stats=db.stats(),
-        prospects=db.prospect_count(),
-        countries_filter=db.distinct_col("country"),
-        statuses=db.VALID_STATUSES,
-    )
+# How many businesses to pull per city — fixed so the user never picks a limit.
+SCRAPE_MAX_PER_CITY = 250
 
 
 @app.route("/scrape", methods=["POST"])
 def scrape():
     country = request.form.get("country", "").strip()
     category = request.form.get("category", "cafe").strip()
-    cities = request.form.getlist("cities")  # checkboxes
-    manual = [c.strip() for c in request.form.get("manual", "").replace(";", "\n").splitlines() if c.strip()]
-    cities = [c for c in cities if c] + manual
-    try:
-        max_results = max(1, min(500, int(request.form.get("max", 150))))
-    except ValueError:
-        max_results = 150
+    cities = [c for c in request.form.getlist("cities") if c]
     if not cities:
-        flash("Обери хоча б одне місто.", "error")
+        flash("Обери хоча б одне місто зі списку ліворуч.", "error")
         return redirect(url_for("index"))
     targets = [{
         "geocode_q": geo_geocode_query(country, c) if country else c,
         "country": country, "region": geo_region_of(country, c), "city": c,
     } for c in cities]
-    label = f"{category} · {country or '—'} · {', '.join(cities[:4])}" + (" …" if len(cities) > 4 else "")
+    label = f"{category} · {', '.join(cities[:4])}" + (" …" if len(cities) > 4 else "")
     jid = _new_job(label)
-    threading.Thread(target=_run_scrape_job, args=(jid, targets, category, max_results),
+    threading.Thread(target=_run_scrape_job, args=(jid, targets, category, SCRAPE_MAX_PER_CITY),
                      daemon=True).start()
-    flash(f"Збираю «{category}» у {len(cities)} містах. Прогрес — у журналі ліворуч; реєстр оновиться сам.", "ok")
+    flash(f"Збираю «{category}» у {len(cities)} містах. За хвилину список оновиться сам.", "ok")
     return redirect(url_for("index"))
 
 

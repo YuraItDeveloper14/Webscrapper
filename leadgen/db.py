@@ -53,7 +53,7 @@ LEADS = Table(
     Index("idx_leads_country", "country"),
 )
 
-VALID_STATUSES = ("new", "contacted", "called", "replied", "bounced", "skip")
+VALID_STATUSES = ("new", "target", "called", "client", "no")
 _LEAD_COLS = ("name", "website", "email", "phone", "address", "category", "rating",
               "query", "maps_url", "lat", "lon", "country", "region", "city",
               "site_ok", "mobile")

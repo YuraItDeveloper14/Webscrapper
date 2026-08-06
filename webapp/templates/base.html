@@ -4,226 +4,114 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}leadgen{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 {% block head %}{% endblock %}
 <style>
-  /* ============ cartographic field console ============ */
   :root{
-    --paper:#e6e7df; --card:#f4f4ee; --sunk:#ecede5;
-    --ink:#17211d; --ink-soft:#5c665f; --ink-faint:#8b948d;
-    --contour:#d3d2c4; --contour-2:#c2c2b2;
-    --teal:#1c6e68; --teal-deep:#155450; --teal-wash:rgba(28,110,104,.10);
-    --marker:#c6552b; --marker-wash:rgba(198,85,43,.12);
-    --ok:#1c6e68; --warn:#a6742a; --err:#b23b3b;
-    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  }
-  @media (prefers-color-scheme:dark){
-    :root{
-      --paper:#0f1618; --card:#161f21; --sunk:#121a1c;
-      --ink:#e7ebe6; --ink-soft:#93a09a; --ink-faint:#6b7873;
-      --contour:#26322f; --contour-2:#324340;
-      --teal:#40b8ae; --teal-deep:#2e8f87; --teal-wash:rgba(64,184,174,.12);
-      --marker:#e0764b; --marker-wash:rgba(224,118,75,.14);
-      --ok:#40b8ae; --warn:#d0a24e; --err:#e06a6a;
-    }
+    --page:#f7f8fa; --surface:#ffffff; --surface-2:#f1f5f9; --sunk:#f8fafc;
+    --text:#0f172a; --text-soft:#475569; --text-faint:#64748b;
+    --border:#e5e8ee; --border-strong:#cbd5e1;
+    --orange:#ea580c; --orange-hover:#c2410c; --orange-bg:#fff2ea;
+    --green:#16a34a; --green-bg:#e7f7ed; --red:#dc2626; --red-bg:#fdecec;
+    --amber:#d97706; --amber-bg:#fdf3e3; --navy:#0f172a; --blue:#0369a1;
+    --radius:10px;
+    --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'Cascadia Code',Consolas,monospace;
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:var(--paper);color:var(--ink);font:14.5px/1.55 var(--sans)}
-  a{color:var(--teal-deep);text-decoration:none}
-  a:hover{text-decoration:underline}
-  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+  body{margin:0;background:var(--page);color:var(--text);
+    font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:var(--orange-hover);text-decoration:none}
+  a:hover{color:var(--orange)}
+  :focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:6px}
 
-  /* ruler: a graduated coordinate scale used as the signature divider */
-  .ruler{height:9px;
-    background:
-      repeating-linear-gradient(90deg,var(--contour-2) 0 1px,transparent 1px 14px) bottom/100% 6px no-repeat,
-      repeating-linear-gradient(90deg,var(--contour-2) 0 1px,transparent 1px 70px) bottom/100% 9px no-repeat;
-    opacity:.9}
-
-  /* ---- header / instrument readout ---- */
-  header.top{background:var(--card);border-bottom:1px solid var(--contour)}
-  .top-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
-    padding:16px 26px;max-width:1280px;margin:0 auto}
+  /* header */
+  header.top{background:var(--surface);border-bottom:1px solid var(--border)}
+  .top-in{display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+    padding:15px 26px;max-width:1320px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:11px}
-  .brand svg{display:block}
-  .brand .name{font-weight:680;font-size:17px;letter-spacing:-.2px}
-  .brand .name b{color:var(--teal-deep);font-weight:680}
-  .brand .tag{font:11px/1 var(--mono);color:var(--ink-faint);letter-spacing:.5px;
-    text-transform:uppercase;margin-top:3px}
-  .nav{display:flex;gap:4px;background:var(--sunk);border:1px solid var(--contour);
-    border-radius:9px;padding:3px}
-  .nav a{padding:6px 14px;border-radius:7px;font:600 13px/1 var(--sans);color:var(--ink-soft);
-    text-decoration:none}
-  .nav a:hover{color:var(--ink);text-decoration:none}
-  .nav a.on{background:var(--card);color:var(--teal-deep);box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .readout{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap}
-  .gauge{min-width:58px}
-  .gauge .v{font:600 22px/1 var(--mono);letter-spacing:-.5px;display:block}
-  .gauge .v.hot{color:var(--marker)}
-  .gauge .l{font:10px/1.4 var(--mono);color:var(--ink-faint);text-transform:uppercase;
-    letter-spacing:1px;margin-top:6px;display:block;
-    border-top:1px solid var(--contour);padding-top:5px}
+  .logo{width:34px;height:34px;border-radius:9px;background:var(--orange);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+  .brand .name{font-weight:700;font-size:18px;letter-spacing:-.3px}
+  .brand .tag{font-size:12px;color:var(--text-faint);margin-top:1px}
+  .readout{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
+  .gauge{display:block;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:8px 15px;min-width:76px;text-align:left;
+    transition:border-color .15s,box-shadow .15s;cursor:pointer}
+  .gauge:hover{border-color:var(--border-strong);box-shadow:0 1px 6px rgba(15,23,42,.06)}
+  .gauge .v{font-size:22px;font-weight:700;line-height:1;letter-spacing:-.5px;display:block}
+  .gauge .l{font-size:11px;color:var(--text-faint);font-weight:500;margin-top:5px;display:block}
+  .gauge.g-leads .v{color:var(--orange)}
+  .gauge.g-prospects .v{color:var(--red)}
+  .gauge.g-email .v{color:var(--green)}
+  .gauge.g-cov .v{color:var(--navy)}
 
-  main{max-width:1280px;margin:0 auto;padding:24px 26px 60px}
-  .flash{padding:11px 15px;border-radius:9px;margin-bottom:16px;font-size:13.5px;
-    border-left:3px solid;background:var(--card)}
-  .flash.ok{border-color:var(--ok);color:var(--ink)}
-  .flash.error{border-color:var(--err);color:var(--ink)}
+  main{max-width:1320px;margin:0 auto;padding:24px 26px 64px}
+  .flash{padding:12px 16px;border-radius:var(--radius);margin-bottom:16px;font-size:14px;
+    border:1px solid;font-weight:500}
+  .flash.ok{background:var(--green-bg);border-color:#bfe6cd;color:#166534}
+  .flash.error{background:var(--red-bg);border-color:#f3c9c9;color:#991b1b}
 
-  .split{display:grid;grid-template-columns:322px 1fr;gap:24px;align-items:start}
-  @media(max-width:920px){.split{grid-template-columns:1fr}}
+  .split{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
 
-  .panel{background:var(--card);border:1px solid var(--contour);border-radius:13px;overflow:hidden}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 3px rgba(15,23,42,.04)}
   .panel + .panel{margin-top:18px}
-  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;
-    padding:14px 17px 0}
-  .panel-h h2{margin:0;font:600 11.5px/1 var(--mono);letter-spacing:1.3px;
-    text-transform:uppercase;color:var(--ink-soft)}
-  .panel-b{padding:15px 17px 18px}
+  .panel-h{padding:16px 18px 0}
+  .panel-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.2px;color:var(--text)}
+  .panel-h .sub{font-size:12px;color:var(--text-faint);margin-top:3px;line-height:1.45}
+  .panel-b{padding:14px 18px 18px}
 
-  label{display:block;font-size:12px;color:var(--ink-soft);margin:13px 0 5px}
+  label{display:block;font-size:12.5px;color:var(--text-soft);font-weight:500;margin:14px 0 6px}
   label:first-child{margin-top:0}
-  input,select,textarea{width:100%;background:var(--sunk);border:1px solid var(--contour);
-    color:var(--ink);border-radius:8px;padding:9px 11px;font:14px/1.4 var(--sans)}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);
-    box-shadow:0 0 0 3px var(--teal-wash)}
-  textarea{resize:vertical;min-height:46px;font-family:var(--mono);font-size:13px}
-  .num{font-family:var(--mono)}
+  input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border-strong);
+    color:var(--text);border-radius:9px;padding:10px 12px;font:14.5px/1.4 var(--sans)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
+    box-shadow:0 0 0 3px var(--orange-bg)}
+  select{cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
 
-  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--teal);color:#fff;
-    border:none;border-radius:8px;padding:10px 15px;font:600 13.5px/1 var(--sans);
-    cursor:pointer;transition:background .15s}
-  .btn:hover{background:var(--teal-deep);text-decoration:none}
-  .btn.ghost{background:transparent;border:1px solid var(--contour);color:var(--ink)}
-  .btn.ghost:hover{border-color:var(--teal);color:var(--teal-deep)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--orange);
+    color:#fff;border:none;border-radius:9px;padding:11px 16px;font:600 14px/1 var(--sans);
+    cursor:pointer;transition:background .15s;width:100%}
+  .btn:hover{background:var(--orange-hover);color:#fff}
+  .btn.sm{width:auto;padding:8px 13px;font-size:13px}
+  .btn.ghost{background:var(--surface);border:1px solid var(--border-strong);color:var(--text)}
+  .btn.ghost:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-strong)}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .hint{font-size:11px;color:var(--text-faint);font-weight:400}
 
-  /* ---- leads register ---- */
-  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:15px 18px}
-  .reg-count{font:12px/1.4 var(--mono);color:var(--ink-soft)}
-  .tick{display:inline-block;padding:2px 8px;border:1px solid var(--contour);border-radius:20px;
-    font:11px/1.4 var(--mono);color:var(--ink-soft);margin-left:6px;white-space:nowrap}
-  .scroll{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  thead th{font:600 10.5px/1 var(--mono);letter-spacing:1px;text-transform:uppercase;
-    color:var(--ink-faint);text-align:left;padding:9px 12px;
-    border-top:1px solid var(--contour);border-bottom:1px solid var(--contour);
-    background:var(--sunk);position:sticky;top:0}
-  tbody td{padding:9px 12px;border-bottom:1px solid var(--contour);vertical-align:middle}
-  tbody tr:hover td{background:var(--sunk)}
-  .name-cell{display:flex;align-items:center;gap:9px;min-width:0}
-  .name-cell .nm{font-weight:560;overflow:hidden;text-overflow:ellipsis}
-  /* the map pin: filled = reachable target (has email), hollow = not yet */
-  .pin{flex:0 0 auto;width:11px;height:11px;border-radius:50% 50% 50% 0;
-    transform:rotate(-45deg);border:1.5px solid var(--ink-faint);position:relative}
-  .pin.on{background:var(--marker);border-color:var(--marker)}
-  .em{font-family:var(--mono);font-size:12.5px}
-  .em a{color:var(--marker)}
-  .em .none{color:var(--ink-faint)}
-  .ph{font-family:var(--mono);font-size:12px;color:var(--ink-soft);white-space:nowrap}
-  .cat{display:inline-block;padding:1px 9px;border-radius:5px;font:11px/1.7 var(--mono);
-    color:var(--teal-deep);background:var(--teal-wash);white-space:nowrap}
-  .addr{color:var(--ink-soft);font-size:12.5px}
-  select.status{width:auto;padding:5px 8px;font:12px/1 var(--mono);border-radius:6px}
-
-  /* ---- plot log (scrape jobs) ---- */
-  .log{margin-top:14px;display:flex;flex-direction:column;gap:7px}
-  .job{font:12px/1.4 var(--mono);padding:9px 11px;border-radius:8px;
-    border:1px solid var(--contour);background:var(--sunk);color:var(--ink-soft)}
-  .job .id{color:var(--ink-faint)}
-  .job.running{border-color:var(--warn)}
-  .job.running .id{color:var(--warn)}
-  .job.done{border-color:var(--ok)}
-  .job.error{border-color:var(--err);color:var(--ink)}
-  .empty{padding:34px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px}
-
-  /* filters: paired fields */
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .hint{color:var(--ink-faint);font-family:var(--mono);font-size:11px}
-
-  /* city picker */
-  .cities{display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto;
-    border:1px solid var(--contour);border-radius:8px;padding:9px 11px;background:var(--sunk)}
-  .cities label{margin:0;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer}
-  .cities .cityall{border-bottom:1px solid var(--contour);padding-bottom:6px;margin-bottom:2px;
-    color:var(--ink-soft);font:600 11px/1.6 var(--mono);text-transform:uppercase;letter-spacing:.6px}
-  .cities input[type=checkbox]{width:auto}
-  input[type=checkbox]{accent-color:var(--teal)}
-
-  /* selection + bulk bar */
-  th.chk,td.chk{width:34px;text-align:center;padding-left:14px}
-  .rowchk,#selAll{width:auto;cursor:pointer}
-  .bulkbar{display:none;align-items:center;gap:11px;padding:11px 18px;
-    border-top:1px solid var(--contour);background:var(--teal-wash);font-size:13px}
-  .bulkbar.show{display:flex}
-  .bulkbar #bulkCount{font:600 12px/1 var(--mono);color:var(--teal-deep)}
-
-  /* copy button + maps glyph */
-  .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:13px;
-    padding:0 3px;opacity:0;transition:opacity .12s;vertical-align:middle}
-  tr:hover .cp{opacity:1}
-  .cp:hover{color:var(--teal)}
-  .maps{display:inline-block;font-size:17px;line-height:1;color:var(--teal);text-decoration:none;
-    transform:translateY(1px)}
-  .maps:hover{color:var(--marker);text-decoration:none}
-  .ph a,a.ph{color:var(--ink-soft)}
-
-  /* opportunity badge */
-  .opp{display:inline-block;padding:2px 8px;border-radius:6px;font:600 11px/1.5 var(--mono);
-    white-space:nowrap;cursor:default}
-  .opp.hot{background:var(--marker-wash);color:var(--marker);border:1px solid var(--marker)}
-  .opp.warm{background:rgba(166,116,42,.12);color:var(--warn);border:1px solid var(--warn)}
-  .opp.cold{background:var(--sunk);color:var(--ink-faint);border:1px solid var(--contour)}
-  .opp-why{font:11px/1.4 var(--mono);color:var(--ink-soft);margin-top:3px}
-  .opp-angle{color:var(--teal-deep)}
-
-  /* map page */
-  .map-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;
-    padding:13px 16px;flex-wrap:wrap;border-bottom:1px solid var(--contour)}
-  .map-filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0}
-  .map-filters select{width:auto;padding:7px 10px}
-  .map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .map-legend .lg{display:flex;align-items:center;gap:6px;font:12px/1 var(--mono);color:var(--ink-soft)}
-  .dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid #fff}
-  .dot.hot{background:var(--marker)} .dot.warm{background:var(--warn)} .dot.cold{background:var(--ink-faint)}
-  #map{height:calc(100vh - 210px);min-height:440px;width:100%;background:var(--sunk);z-index:0}
-  .leaflet-popup-content .pp{font:13px/1.5 var(--sans);color:var(--ink)}
-  .pp a{color:var(--teal-deep)} .pp .none{color:var(--ink-faint)}
-  .pp-opp{margin-top:6px;font:600 11px/1.5 var(--mono)}
-  .pp-opp.opp-hot{color:var(--marker)} .pp-opp.opp-warm{color:var(--warn)} .pp-opp.opp-cold{color:var(--ink-faint)}
-  .pp-meta{color:var(--ink-soft);font:11px/1.4 var(--mono);margin-top:2px}
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  {% block style %}{% endblock %}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 22s7-6.1 7-12A7 7 0 1 0 5 10c0 5.9 7 12 7 12Z"
-              fill="var(--teal)" stroke="var(--teal-deep)" stroke-width="1.2"/>
-        <circle cx="12" cy="10" r="2.6" fill="var(--card)"/>
-      </svg>
+      <div class="logo">l</div>
       <div>
-        <div class="name">lead<b>gen</b></div>
-        <div class="tag">мапа → контакти</div>
+        <div class="name">leadgen</div>
+        <div class="tag">пошук клієнтів для твоїх послуг</div>
       </div>
     </div>
-    <nav class="nav">
-      <a href="{{ url_for('index') }}" class="{{ 'on' if request.path == '/' }}">Реєстр</a>
-      <a href="{{ url_for('map_view') }}" class="{{ 'on' if request.path == '/map' }}">Карта</a>
-    </nav>
     <div class="readout">
-      <div class="gauge"><span class="v num">{{ stats.total }}</span><span class="l">ліди</span></div>
-      <div class="gauge"><span class="v num hot">{{ stats.with_email }}</span><span class="l">з email</span></div>
-      <div class="gauge"><span class="v num">{{ stats.with_website }}</span><span class="l">сайти</span></div>
-      {% if prospects is defined %}<div class="gauge"><span class="v num hot">{{ prospects }}</span><span class="l">перспективні</span></div>{% endif %}
-      <div class="gauge"><span class="v num">{{ ((stats.with_email / stats.total * 100)|round(0)|int) if stats.total else 0 }}%</span><span class="l">охоплення</span></div>
+      <a class="gauge g-leads" href="{{ url_for('index') }}" title="Усі знайдені бізнеси у базі">
+        <span class="v">{{ stats.total }}</span><span class="l">бізнесів</span></a>
+      <a class="gauge g-prospects" href="{{ url_for('index', opp='weak') }}" title="Бізнеси без сайту або зі слабким сайтом — кому є що продати">
+        <span class="v">{{ prospects if prospects is defined else 0 }}</span><span class="l">перспективних</span></a>
+      <a class="gauge g-email" href="{{ url_for('index', has_email='yes') }}" title="Бізнеси, у яких знайдено email">
+        <span class="v">{{ stats.with_email }}</span><span class="l">з email</span></a>
+      <div class="gauge g-cov" title="Частка бізнесів, у яких є email">
+        <span class="v">{{ ((stats.with_email / stats.total * 100)|round|int) if stats.total else 0 }}%</span>
+        <span class="l">охоплення</span></div>
     </div>
   </div>
-  <div class="ruler"></div>
 </header>
 <main>
   {% with messages = get_flashed_messages(with_categories=true) %}
