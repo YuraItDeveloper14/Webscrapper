@@ -98,6 +98,24 @@ def _tag(t: dict, *keys: str) -> str:
     return ""
 
 
+_SOCIAL_HOSTS = ("instagram.com", "facebook.com", "fb.com", "t.me", "tiktok.com")
+
+
+def _social_link(t: dict) -> str:
+    """Best social-media profile for a business (many SMBs have only this)."""
+    for key, base in (("contact:instagram", "https://instagram.com/"),
+                      ("contact:facebook", "https://facebook.com/"),
+                      ("contact:tiktok", "https://tiktok.com/@")):
+        v = t.get(key)
+        if v:
+            return v if v.startswith("http") else base + v.lstrip("@/")
+    # sometimes the "website" tag is actually a social page
+    site = (t.get("website") or t.get("contact:website") or "").lower()
+    if any(h in site for h in _SOCIAL_HOSTS):
+        return t.get("website") or t.get("contact:website")
+    return ""
+
+
 def _to_lead(el: dict, query: str, geo: dict) -> dict:
     t = el.get("tags", {})
     street = _tag(t, "addr:street")
@@ -108,6 +126,7 @@ def _to_lead(el: dict, query: str, geo: dict) -> dict:
     # coordinates: nodes carry lat/lon directly, ways/relations carry a center
     lat = el.get("lat") or el.get("center", {}).get("lat")
     lon = el.get("lon") or el.get("center", {}).get("lon")
+    social = _social_link(t)
     return {
         "name": _tag(t, "name", "name:en", "brand"),
         "website": _tag(t, "website", "contact:website"),
@@ -122,6 +141,7 @@ def _to_lead(el: dict, query: str, geo: dict) -> dict:
         "country": geo.get("country", ""),
         "region": geo.get("region", ""),
         "city": geo.get("city", ""),
+        "social": social,
     }
 
 

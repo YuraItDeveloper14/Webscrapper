@@ -46,7 +46,7 @@ LEADS = Table(
     Column("lat", Float), Column("lon", Float),
     Column("country", Text), Column("region", Text), Column("city", Text),
     Column("notes", Text),
-    Column("site_ok", Integer), Column("mobile", Integer),
+    Column("site_ok", Integer), Column("mobile", Integer), Column("social", Text),
     Column("created_at", DateTime, server_default=func.now()),
     Index("idx_leads_email", "email"),
     Index("idx_leads_status", "email_status"),
@@ -56,18 +56,24 @@ LEADS = Table(
 VALID_STATUSES = ("new", "marked", "success", "rejected")
 _LEAD_COLS = ("name", "website", "email", "phone", "address", "category", "rating",
               "query", "maps_url", "lat", "lon", "country", "region", "city",
-              "site_ok", "mobile")
+              "site_ok", "mobile", "social")
 
 # Columns added to the SQLite file after its first release (Postgres is created fresh).
 _ADDED_COLUMNS = {"lat": "REAL", "lon": "REAL", "country": "TEXT", "region": "TEXT",
-                  "city": "TEXT", "notes": "TEXT", "site_ok": "INTEGER", "mobile": "INTEGER"}
+                  "city": "TEXT", "notes": "TEXT", "site_ok": "INTEGER", "mobile": "INTEGER",
+                  "social": "TEXT"}
 
 
-def _migrate_sqlite(conn) -> None:
-    have = {r[1] for r in conn.execute(text("PRAGMA table_info(leads)"))}
-    for col, decl in _ADDED_COLUMNS.items():
-        if col not in have:
-            conn.execute(text(f"ALTER TABLE leads ADD COLUMN {col} {decl}"))
+def _migrate(conn) -> None:
+    """Add any missing columns to an existing table (SQLite or Postgres)."""
+    if IS_SQLITE:
+        have = {r[1] for r in conn.execute(text("PRAGMA table_info(leads)"))}
+        for col, decl in _ADDED_COLUMNS.items():
+            if col not in have:
+                conn.execute(text(f"ALTER TABLE leads ADD COLUMN {col} {decl}"))
+    else:  # Postgres supports IF NOT EXISTS
+        for col, decl in _ADDED_COLUMNS.items():
+            conn.execute(text(f"ALTER TABLE leads ADD COLUMN IF NOT EXISTS {col} {decl}"))
 
 
 # Old status value -> new one (statuses were simplified to 3 + default).
@@ -79,8 +85,7 @@ _STATUS_REMAP = {"target": "marked", "client": "success", "no": "rejected",
 def init_db() -> None:
     _meta.create_all(ENGINE)
     with ENGINE.begin() as conn:
-        if IS_SQLITE:
-            _migrate_sqlite(conn)
+        _migrate(conn)
         for old, new in _STATUS_REMAP.items():
             conn.execute(update(LEADS).where(LEADS.c.email_status == old)
                          .values(email_status=new))

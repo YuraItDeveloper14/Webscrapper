@@ -43,6 +43,9 @@ _job_seq = 0
 _lock = threading.Lock()
 
 
+JOB_TTL = 6  # seconds a finished job message stays visible
+
+
 def _new_job(label: str) -> int:
     global _job_seq
     with _lock:
@@ -50,8 +53,16 @@ def _new_job(label: str) -> int:
         jid = _job_seq
         JOBS[jid] = {"id": jid, "label": label, "state": "running",
                      "found": 0, "with_email": 0, "added": 0,
-                     "started": time.time(), "error": ""}
+                     "started": time.time(), "finished": 0, "error": ""}
     return jid
+
+
+def _recent_jobs():
+    """Running jobs + ones that finished within the last JOB_TTL seconds."""
+    now = time.time()
+    out = [j for j in JOBS.values()
+           if j["state"] == "running" or (now - j.get("finished", 0)) < JOB_TTL]
+    return sorted(out, key=lambda j: -j["id"])[:5]
 
 
 def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: int) -> None:
@@ -78,6 +89,7 @@ def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: i
     except Exception as exc:  # surface failures to the UI
         JOBS[jid]["state"] = "error"
         JOBS[jid]["error"] = str(exc)[:300]
+    JOBS[jid]["finished"] = time.time()
 
 
 def gmaps_url(lead: dict) -> str:
@@ -124,6 +136,8 @@ def _query_and_filter(args, limit=1000):
 @app.route("/")
 def index():
     leads, filters, opp = _query_and_filter(request.args)
+    # best sales targets first (no site / weak site), unless the user chose a sort
+    leads.sort(key=lambda l: -opportunity(l)["score"])
     return render_template(
         "leads.html",
         leads=leads,
@@ -138,7 +152,7 @@ def index():
         statuses=db.VALID_STATUSES,
         category_labels=CATEGORY_LABELS,
         geo=GEO_COUNTRIES,
-        jobs=sorted(JOBS.values(), key=lambda j: -j["id"])[:5],
+        jobs=_recent_jobs(),
     )
 
 
@@ -204,7 +218,7 @@ def bulk_status():
 
 @app.route("/jobs.json")
 def jobs_json():
-    return jsonify(sorted(JOBS.values(), key=lambda j: -j["id"])[:5])
+    return jsonify(_recent_jobs())
 
 
 @app.route("/export")

@@ -55,10 +55,22 @@
   .opp.has-site{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-line)}
   .opp-angle{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
 
-  tr.st-marked td{background:var(--yellow-bg)!important} tr.st-marked td:first-child{box-shadow:inset 3px 0 var(--yellow)}
-  tr.st-success td{background:var(--green-bg)!important} tr.st-success td:first-child{box-shadow:inset 3px 0 var(--green)}
-  tr.st-rejected td{background:var(--red-bg)!important;color:var(--red)!important} tr.st-rejected td:first-child{box-shadow:inset 3px 0 var(--red)}
-  tr.st-rejected .nm,tr.st-rejected a,tr.st-rejected .cat,tr.st-rejected .opp,tr.st-rejected .maps{color:var(--red)!important}
+  /* soft left-to-right "brushstroke" tint by status */
+  tr.st-marked{background:linear-gradient(90deg, rgba(234,179,8,.24) 0%, rgba(234,179,8,.07) 26%, transparent 55%)}
+  tr.st-success{background:linear-gradient(90deg, rgba(22,163,74,.20) 0%, rgba(22,163,74,.06) 26%, transparent 55%)}
+  tr.st-rejected{background:linear-gradient(90deg, rgba(220,38,38,.18) 0%, rgba(220,38,38,.05) 26%, transparent 55%)}
+  tr.st-marked td,tr.st-success td,tr.st-rejected td{background:transparent}
+  tr.st-marked:hover td,tr.st-success:hover td,tr.st-rejected:hover td{background:transparent}
+
+  /* quick-mark star */
+  .star{background:none;border:none;cursor:pointer;font-size:19px;line-height:1;color:var(--ink-faint);padding:2px 4px}
+  .star:hover{color:var(--yellow)} .star.on{color:#eab308}
+  /* social link + template/note action buttons */
+  .soc{display:inline-block;margin-top:3px;font-size:11.5px;font-weight:600;color:var(--blue);
+    border-bottom:1px solid var(--blue-line)}
+  .actbtn{background:none;border:1px solid var(--border-strong);border-radius:8px;padding:6px 9px;margin-left:6px;
+    cursor:pointer;color:var(--ink-faint);font-size:13px}
+  .actbtn:hover{border-color:var(--ink);color:var(--ink)} .actbtn.has{color:var(--ink);border-color:var(--ink)}
 
   .dd{position:relative;display:inline-block}
   .dd-btn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border-strong);
@@ -82,8 +94,9 @@
   .empty h3{margin:0 0 10px;font-size:17px;color:var(--ink);font-weight:800}
   .empty p{margin:5px auto;max-width:460px;font-size:13.5px;line-height:1.65}
 
-  /* job status — separate strip below, with spinner */
-  .jobwrap{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+  /* job status — at the top of the results panel, with spinner */
+  .jobbar{display:flex;flex-direction:column;gap:8px;padding:15px 19px 0}
+  .jobbar:empty{display:none}
   .job{display:flex;align-items:center;gap:11px;font-size:13.5px;font-weight:600;padding:13px 16px;
     border-radius:12px;border:1px solid var(--border-strong);background:var(--panel);color:var(--ink-soft)}
   .job.running{border-color:var(--yellow-line);background:var(--yellow-bg);color:var(--yellow)}
@@ -114,6 +127,7 @@
   </div>
 
   <div class="panel">
+    <div class="jobbar" id="jobs"></div>
     <div class="chips">
       <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Знайдені</a>
       <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak') }}">Без сайту</a>
@@ -149,7 +163,7 @@
         {% set o = opportunity(l) %}
         <tr data-id="{{ l.id }}" class="st-{{ l.email_status }}">
           <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onChk()"></td>
-          <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span></td>
+          <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span>{% if l.social %}<br><a class="soc" href="{{ l.social }}" target="_blank" rel="noopener">соцмережі ↗</a>{% endif %}</td>
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}"><span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
@@ -167,6 +181,8 @@
               </div>
             </div>
             <button class="notebtn {{ 'has' if l.notes }}" title="Нотатка" onclick="toggleNote({{ l.id }})">✎</button>
+            <button class="actbtn" title="Скопіювати шаблон повідомлення" onclick="copyTemplate(this,{{ l.name|tojson }})">✉</button>
+            <button class="star {{ 'on' if l.email_status=='marked' }}" title="Позначити" onclick="toggleStar({{ l.id }},this)">{{ '★' if l.email_status=='marked' else '☆' }}</button>
           </td>
         </tr>
         <tr class="note-row" id="note-{{ l.id }}" style="display:none"><td colspan="9">
@@ -183,8 +199,6 @@
     </div>
   </div>
 </div>
-
-<div class="jobwrap" id="jobs"></div>
 
 <script>
 const GEO = {{ geo|tojson }};
@@ -223,9 +237,10 @@ function ddToggle(btn){const m=btn.nextElementSibling;
   if(openMenu&&openMenu!==m)openMenu.classList.remove('open');
   if(m.classList.contains('open')){m.classList.remove('open');openMenu=null;return;}
   const r=btn.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=r.left+'px';m.classList.add('open');openMenu=m;}
-function ddPick(id,st,opt){const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn');
-  btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=({new:'новий',marked:'позначення',success:'успішні',rejected:'відмова'})[st];
-  dd.closest('tr').className='st-'+st; dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
+function ddPick(id,st,opt){const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn'),tr=dd.closest('tr');
+  btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=STN[st];
+  tr.className='st-'+st; dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
+  const star=tr.querySelector('.star');if(star){const on=st==='marked';star.classList.toggle('on',on);star.textContent=on?'★':'☆';}
   fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st});}
 document.addEventListener('click',e=>{if(openMenu&&!e.target.closest('.dd')){openMenu.classList.remove('open');openMenu=null;}});
 window.addEventListener('scroll',()=>{if(openMenu){openMenu.classList.remove('open');openMenu=null;}},true);
@@ -234,6 +249,13 @@ function toggleNote(id){const r=document.getElementById('note-'+id);r.style.disp
 function saveNote(id,ta){const nb=document.querySelector(`button.notebtn[onclick="toggleNote(${id})"]`);if(nb)nb.classList.toggle('has',ta.value.trim().length>0);
   fetch(`/lead/${id}/note`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'note='+encodeURIComponent(ta.value)});}
 function cp(t,b){navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);});}
+const STN={new:'новий',marked:'позначення',success:'успішні',rejected:'відмова'};
+function toggleStar(id,btn){const on=btn.classList.toggle('on');btn.textContent=on?'★':'☆';
+  const st=on?'marked':'new';const tr=btn.closest('tr');tr.className='st-'+st;
+  const db=tr.querySelector('.dd-btn');if(db){db.className='dd-btn st-'+st;db.querySelector('span').textContent=STN[st];}
+  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st});}
+function copyTemplate(btn,name){const msg=`Доброго дня! Звертаюся до «${name}». Переглянув ваш бізнес — можу зробити сучасний сайт, налаштувати рекламу та AI-автоматизацію, щоб було більше клієнтів. Зручно коротко розповісти?`;
+  navigator.clipboard.writeText(msg).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1000);});}
 
 function sel(){return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value);}
 function onChk(){const n=sel().length;document.getElementById('bulkCount').textContent=n;document.getElementById('bulkbar').classList.toggle('show',n>0);}
@@ -256,7 +278,10 @@ async function pollJobs(){try{const jobs=await (await fetch('/jobs.json')).json(
     if(j.state==='running')return `<div class="job running"><span class="spin"></span>Збираю «${j.label}» — знайдено ${j.found}…</div>`;
     if(j.state==='done')return `<div class="job done">✓ «${j.label}» — додано ${j.added} нових бізнесів</div>`;
     return `<div class="job error">✕ «${j.label}» — помилка: ${j.error}</div>`;}).join('');
-  const run=jobs.some(j=>j.state==='running');if(run){window._had=true;setTimeout(pollJobs,1500);}else if(window._had){window._had=false;location.reload();}
+  const run=jobs.some(j=>j.state==='running');
+  if(run){window._had=true;setTimeout(pollJobs,1500);}
+  else if(window._had){window._had=false;location.reload();}
+  else if(jobs.length){setTimeout(pollJobs,2000);}   // let done messages age out (~6s server-side)
   }catch(e){setTimeout(pollJobs,4000);}}
 pollJobs();
 </script>
