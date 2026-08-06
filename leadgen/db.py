@@ -93,12 +93,14 @@ def upsert_lead(conn, lead: dict) -> bool:
     Returns True if a new row was inserted. Identity is `maps_url` when present,
     otherwise (name, address).
     """
-    sel = select(LEADS.c.id, LEADS.c.email, LEADS.c.website).where(
-        or_(LEADS.c.maps_url == lead.get("maps_url"),
-            and_(LEADS.c.maps_url.is_(None),
-                 LEADS.c.name == lead.get("name"),
-                 LEADS.c.address == lead.get("address")))
-    )
+    # Identity: same OSM url, OR same business name in the same city (dedups the
+    # node+way duplicates OSM often has for one place).
+    ident = [LEADS.c.maps_url == lead.get("maps_url")]
+    nm, city = (lead.get("name") or "").strip(), (lead.get("city") or "").strip()
+    if nm and city:
+        ident.append(and_(func.lower(LEADS.c.name) == nm.lower(),
+                          func.lower(LEADS.c.city) == city.lower()))
+    sel = select(LEADS.c.id, LEADS.c.email, LEADS.c.website).where(or_(*ident))
     row = conn.execute(sel).first()
     if row is None:
         conn.execute(insert(LEADS).values({c: lead.get(c) for c in _LEAD_COLS}))
@@ -153,6 +155,54 @@ def set_status(lead_id: int, status: str) -> bool:
     with connect() as conn:
         conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(email_status=status))
     return True
+
+
+def set_note(lead_id: int, note: str) -> None:
+    with connect() as conn:
+        conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(notes=note[:2000]))
+
+
+def clear_all() -> int:
+    """Wipe every lead. Returns how many were deleted."""
+    from sqlalchemy import delete
+    with connect() as conn:
+        n = conn.execute(select(func.count()).select_from(LEADS)).scalar_one()
+        conn.execute(delete(LEADS))
+    return n
+
+
+def dedupe_existing() -> int:
+    """Collapse rows sharing (name, city), keeping the most useful one.
+
+    Preference: a marked/worked status > has email > has website > lowest id.
+    Returns the number of rows removed.
+    """
+    from sqlalchemy import delete
+    with connect() as conn:
+        rows = conn.execute(select(
+            LEADS.c.id, LEADS.c.name, LEADS.c.city, LEADS.c.email,
+            LEADS.c.website, LEADS.c.email_status)).mappings().all()
+        groups: dict[tuple, list] = {}
+        for r in rows:
+            nm = (r["name"] or "").strip().lower()
+            city = (r["city"] or "").strip().lower()
+            if not nm or not city:
+                continue  # can't safely dedup without both
+            groups.setdefault((nm, city), []).append(r)
+
+        def score(r):
+            return (0 if r["email_status"] in ("new", None) else 1,
+                    1 if r["email"] else 0, 1 if r["website"] else 0, -r["id"])
+
+        remove = []
+        for members in groups.values():
+            if len(members) < 2:
+                continue
+            keep = max(members, key=score)
+            remove += [m["id"] for m in members if m["id"] != keep["id"]]
+        if remove:
+            conn.execute(delete(LEADS).where(LEADS.c.id.in_(remove)))
+    return len(remove)
 
 
 def set_status_bulk(ids: list[int], status: str) -> int:

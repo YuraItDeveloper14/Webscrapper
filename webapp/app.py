@@ -69,6 +69,7 @@ def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: i
             for lead in all_leads:
                 if db.upsert_lead(conn, lead):
                     total_added += 1
+        db.dedupe_existing()  # clean any node+way duplicates from this batch
         JOBS[jid]["added"] = total_added
 
     try:
@@ -181,6 +182,19 @@ def scrape():
 def lead_status(lead_id: int):
     db.set_status(lead_id, request.form.get("status", "new"))
     return ("", 204)
+
+
+@app.route("/lead/<int:lead_id>/note", methods=["POST"])
+def lead_note(lead_id: int):
+    db.set_note(lead_id, request.form.get("note", ""))
+    return ("", 204)
+
+
+@app.route("/admin/clear", methods=["POST"])
+def admin_clear():
+    n = db.clear_all()
+    flash(f"База очищена — видалено {n} записів.", "ok")
+    return redirect(url_for("index"))
 
 
 @app.route("/leads/bulk-status", methods=["POST"])

@@ -6,91 +6,93 @@
 <title>{% block title %}leadgen{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 {% block head %}{% endblock %}
 <style>
   :root{
-    --page:#f7f8fa; --surface:#ffffff; --surface-2:#f1f5f9; --sunk:#f8fafc;
-    --text:#0f172a; --text-soft:#475569; --text-faint:#64748b;
-    --border:#e5e8ee; --border-strong:#cbd5e1;
-    --orange:#ea580c; --orange-hover:#c2410c; --orange-bg:#fff2ea;
-    --green:#16a34a; --green-bg:#e7f7ed; --red:#dc2626; --red-bg:#fdecec;
-    --amber:#d97706; --amber-bg:#fdf3e3; --navy:#0f172a; --blue:#0369a1;
-    --radius:10px;
+    --bg:#ffffff; --panel:#ffffff; --sunk:#fafafa; --sunk2:#f4f4f5;
+    --ink:#0a0a0a; --ink-soft:#52525b; --ink-faint:#a1a1aa;
+    --border:#e8e8ea; --border-strong:#d4d4d8;
+    --btn:#0a0a0a; --btn-hover:#2a2a2e;
+    --green:#15803d; --green-bg:#f1fbf4; --green-line:#bbe9ca;
+    --amber:#b45309; --amber-bg:#fef9ef; --amber-line:#f3dca6;
+    --red:#dc2626; --red-bg:#fdf3f3; --red-line:#f3c9c9;
+    --radius:11px;
     --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-    --mono:ui-monospace,'Cascadia Code',Consolas,monospace;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--page);color:var(--text);
+  body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
-  a{color:var(--orange-hover);text-decoration:none}
-  a:hover{color:var(--orange)}
-  :focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:6px}
+  a{color:var(--ink);text-decoration:none}
+  a:hover{color:var(--btn-hover)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
 
-  /* header */
-  header.top{background:var(--surface);border-bottom:1px solid var(--border)}
-  .top-in{display:flex;align-items:center;gap:22px;flex-wrap:wrap;
-    padding:15px 26px;max-width:1320px;margin:0 auto}
+  header.top{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+  .top-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    padding:14px 26px;max-width:1320px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:11px}
-  .logo{width:34px;height:34px;border-radius:9px;background:var(--orange);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
-  .brand .name{font-weight:700;font-size:18px;letter-spacing:-.3px}
-  .brand .tag{font-size:12px;color:var(--text-faint);margin-top:1px}
-  .readout{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
-  .gauge{display:block;background:var(--surface);border:1px solid var(--border);
-    border-radius:var(--radius);padding:8px 15px;min-width:76px;text-align:left;
-    transition:border-color .15s,box-shadow .15s;cursor:pointer}
-  .gauge:hover{border-color:var(--border-strong);box-shadow:0 1px 6px rgba(15,23,42,.06)}
-  .gauge .v{font-size:22px;font-weight:700;line-height:1;letter-spacing:-.5px;display:block}
-  .gauge .l{font-size:11px;color:var(--text-faint);font-weight:500;margin-top:5px;display:block}
-  .gauge.g-leads .v{color:var(--orange)}
-  .gauge.g-prospects .v{color:var(--red)}
-  .gauge.g-email .v{color:var(--green)}
-  .gauge.g-cov .v{color:var(--navy)}
+  .logo{width:34px;height:34px;border-radius:9px;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+  .brand .name{font-weight:800;font-size:18px;letter-spacing:-.4px}
+  .brand .tag{font-size:12px;color:var(--ink-faint);margin-top:1px}
+  .readout{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+  .gauge{display:block;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:8px 15px;min-width:70px;text-align:left;transition:.15s;cursor:pointer}
+  .gauge:hover{border-color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .gauge .v{font-size:20px;font-weight:800;line-height:1;letter-spacing:-.5px;display:block;color:var(--ink)}
+  .gauge .l{font-size:11px;color:var(--ink-faint);font-weight:600;margin-top:5px;display:block}
+  .gauge.g-target .v{color:var(--green)} .gauge.g-called .v{color:var(--amber)}
+  .gauge.g-client .v{color:var(--green)} .gauge.g-no .v{color:var(--red)}
+  .clearbtn{background:none;border:none;color:var(--ink-faint);font:500 12px var(--sans);
+    cursor:pointer;padding:6px 8px;border-radius:7px}
+  .clearbtn:hover{color:var(--red);background:var(--red-bg)}
 
   main{max-width:1320px;margin:0 auto;padding:24px 26px 64px}
   .flash{padding:12px 16px;border-radius:var(--radius);margin-bottom:16px;font-size:14px;
     border:1px solid;font-weight:500}
-  .flash.ok{background:var(--green-bg);border-color:#bfe6cd;color:#166534}
-  .flash.error{background:var(--red-bg);border-color:#f3c9c9;color:#991b1b}
+  .flash.ok{background:var(--green-bg);border-color:var(--green-line);color:var(--green)}
+  .flash.error{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
 
   .split{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
   @media(max-width:900px){.split{grid-template-columns:1fr}}
 
-  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;
-    box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    box-shadow:0 1px 2px rgba(0,0,0,.03)}
   .panel + .panel{margin-top:18px}
-  .panel-h{padding:16px 18px 0}
-  .panel-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.2px;color:var(--text)}
-  .panel-h .sub{font-size:12px;color:var(--text-faint);margin-top:3px;line-height:1.45}
-  .panel-b{padding:14px 18px 18px}
+  .panel-h{padding:17px 19px 0}
+  .panel-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.1px}
+  .panel-h .sub{font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.5}
+  .panel-b{padding:15px 19px 19px}
 
-  label{display:block;font-size:12.5px;color:var(--text-soft);font-weight:500;margin:14px 0 6px}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:15px 0 6px}
   label:first-child{margin-top:0}
-  input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border-strong);
-    color:var(--text);border-radius:9px;padding:10px 12px;font:14.5px/1.4 var(--sans)}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
-    box-shadow:0 0 0 3px var(--orange-bg)}
-  select{cursor:pointer;appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
+  input,textarea{width:100%;background:var(--panel);border:1px solid var(--border-strong);
+    color:var(--ink);border-radius:10px;padding:10px 12px;font:14.5px/1.4 var(--sans)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ink);
+    box-shadow:0 0 0 3px rgba(10,10,10,.08)}
+  /* native select styled clean b&w */
+  select{width:100%;background:var(--panel);border:1px solid var(--border-strong);color:var(--ink);
+    border-radius:10px;padding:10px 34px 10px 12px;font:14.5px/1.4 var(--sans);cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2.4'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--orange);
-    color:#fff;border:none;border-radius:9px;padding:11px 16px;font:600 14px/1 var(--sans);
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--btn);
+    color:#fff;border:none;border-radius:10px;padding:11px 16px;font:600 14px/1 var(--sans);
     cursor:pointer;transition:background .15s;width:100%}
-  .btn:hover{background:var(--orange-hover);color:#fff}
-  .btn.sm{width:auto;padding:8px 13px;font-size:13px}
-  .btn.ghost{background:var(--surface);border:1px solid var(--border-strong);color:var(--text)}
-  .btn.ghost:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-strong)}
+  .btn:hover{background:var(--btn-hover);color:#fff}
+  .btn.sm{width:auto;padding:9px 14px;font-size:13px}
+  .btn.ghost{background:var(--panel);border:1px solid var(--border-strong);color:var(--ink)}
+  .btn.ghost:hover{background:var(--sunk2);color:var(--ink)}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-  .hint{font-size:11px;color:var(--text-faint);font-weight:400}
+  .hint{font-size:11px;color:var(--ink-faint);font-weight:400}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   {% block style %}{% endblock %}
 </style>
 </head>
 <body>
+{% set KL = {'target':'позначено','called':'подзвонив','client':'клієнти','no':'відмови'} %}
 <header class="top">
   <div class="top-in">
     <div class="brand">
@@ -101,15 +103,14 @@
       </div>
     </div>
     <div class="readout">
-      <a class="gauge g-leads" href="{{ url_for('index') }}" title="Усі знайдені бізнеси у базі">
-        <span class="v">{{ stats.total }}</span><span class="l">бізнесів</span></a>
-      <a class="gauge g-prospects" href="{{ url_for('index', opp='weak') }}" title="Бізнеси без сайту або зі слабким сайтом — кому є що продати">
-        <span class="v">{{ prospects if prospects is defined else 0 }}</span><span class="l">перспективних</span></a>
-      <a class="gauge g-email" href="{{ url_for('index', has_email='yes') }}" title="Бізнеси, у яких знайдено email">
-        <span class="v">{{ stats.with_email }}</span><span class="l">з email</span></a>
-      <div class="gauge g-cov" title="Частка бізнесів, у яких є email">
-        <span class="v">{{ ((stats.with_email / stats.total * 100)|round|int) if stats.total else 0 }}%</span>
-        <span class="l">охоплення</span></div>
+      {% for code in ['target','called','client','no'] %}
+        <a class="gauge g-{{ code }}" href="{{ url_for('index', status=code) }}" title="{{ KL[code] }}">
+          <span class="v">{{ status_counts.get(code, 0) if status_counts is defined else 0 }}</span>
+          <span class="l">{{ KL[code] }}</span></a>
+      {% endfor %}
+      <form method="post" action="{{ url_for('admin_clear') }}" onsubmit="return confirm('Очистити всю базу? Усі записи буде видалено безповоротно.');" style="margin:0">
+        <button class="clearbtn" type="submit" title="Видалити всі записи">Очистити базу</button>
+      </form>
     </div>
   </div>
 </header>

@@ -2,75 +2,96 @@
 {% block title %}leadgen{% endblock %}
 {% set LBL = {'new':'новий','target':'в роботі','called':'подзвонив','client':'клієнт','no':'відмова'} %}
 {% block style %}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;
-    border:1px solid var(--border-strong);background:var(--surface);color:var(--text-soft);
+  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:15px 19px 0}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;
+    border:1px solid var(--border-strong);background:var(--panel);color:var(--ink-soft);
     font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
-  .chip:hover{border-color:var(--orange);color:var(--orange)}
-  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
-  .chip .n{font-size:12px;opacity:.8}
-  .cities{display:flex;flex-direction:column;gap:2px;max-height:170px;overflow:auto;
-    border:1px solid var(--border);border-radius:9px;padding:8px 10px;background:var(--sunk)}
-  .cities label{margin:0;display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);
+  .chip:hover{border-color:var(--ink);color:var(--ink)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .cities{display:flex;flex-direction:column;gap:1px;max-height:168px;overflow:auto;
+    border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:var(--sunk)}
+  .cities label{margin:0;display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink);
     font-weight:400;cursor:pointer;padding:2px 0}
-  .cities .all{font-weight:600;color:var(--text-soft);border-bottom:1px solid var(--border);
+  .cities .all{font-weight:600;color:var(--ink-soft);border-bottom:1px solid var(--border);
     padding-bottom:6px;margin-bottom:2px}
-  .cities input{width:auto} input[type=checkbox]{accent-color:var(--orange);cursor:pointer}
+  .cities input{width:auto} input[type=checkbox]{accent-color:var(--ink);cursor:pointer;width:16px;height:16px}
 
-  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px 0}
-  .reg-count{font-size:13px;color:var(--text-soft);font-weight:500}
-  .bulkbar{display:none;align-items:center;gap:11px;margin:14px 18px 0;padding:11px 14px;
-    background:var(--orange-bg);border:1px solid #f6d3bd;border-radius:10px;font-size:13.5px}
-  .bulkbar.show{display:flex}
-  .bulkbar b{color:var(--orange-hover)}
+  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 19px 0}
+  .reg-count{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .bulkbar{display:none;align-items:center;gap:10px;margin:14px 19px 0;padding:11px 14px;
+    background:var(--sunk2);border:1px solid var(--border-strong);border-radius:11px;font-size:13.5px}
+  .bulkbar.show{display:flex} .bulkbar b{color:var(--ink)}
   .scroll{overflow-x:auto;margin-top:12px}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  thead th{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
-    color:var(--text-faint);text-align:left;padding:10px 14px;border-top:1px solid var(--border);
-    border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint);
+    text-align:left;padding:10px 15px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    white-space:nowrap;cursor:pointer;user-select:none}
   thead th.nos{cursor:default}
-  tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody td{padding:11px 15px;border-bottom:1px solid var(--border);vertical-align:middle}
   tbody tr:hover td{background:var(--sunk)}
-  .chk{width:36px;text-align:center;cursor:default}
-  .nm{font-weight:600;color:var(--text)}
-  .em a{color:var(--green);font-weight:600} .em .none{color:var(--text-faint)}
-  .ph a{color:var(--text-soft);font-weight:500;white-space:nowrap} .ph .none{color:var(--text-faint)}
-  .cp{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;padding:0 4px;
-    opacity:0;transition:.12s} tr:hover .cp{opacity:1} .cp:hover{color:var(--orange)}
-  .cat{display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:500;
-    background:var(--surface-2);color:var(--text-soft)}
-  .maps{color:var(--blue);font-weight:600;font-size:13px}
-  .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
-  .opp.hot{background:var(--red-bg);color:var(--red)}
-  .opp.warm{background:var(--amber-bg);color:var(--amber)}
-  .opp.cold{background:var(--green-bg);color:#15803d}
-  .opp-angle{display:block;font-size:11px;color:var(--text-faint);margin-top:3px}
-  select.st{width:auto;padding:6px 26px 6px 10px;font-size:12.5px;font-weight:600;border-radius:7px}
-  select.st.st-new{color:var(--text-soft)}
-  select.st.st-target{color:var(--orange);border-color:var(--orange)}
-  select.st.st-called{color:var(--blue);border-color:var(--blue)}
-  select.st.st-client{color:var(--green);border-color:var(--green)}
-  select.st.st-no{color:var(--red);border-color:var(--red)}
-  .empty{padding:40px 22px;text-align:center;color:var(--text-soft)}
-  .empty h3{margin:0 0 8px;font-size:16px;color:var(--text)}
-  .empty p{margin:4px auto;max-width:440px;font-size:13.5px;line-height:1.6}
+  .chk{width:38px;text-align:center;cursor:default}
+  .nm{font-weight:700;color:var(--ink)}
+  .em a{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
+  .em .none,.ph .none{color:var(--ink-faint)}
+  .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;
+    opacity:0;transition:.12s} tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
+  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
+    background:var(--sunk2);color:var(--ink-soft)}
+  .maps{color:var(--ink-soft);font-weight:600;font-size:13px;border-bottom:1px solid var(--border-strong)}
+  .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;
+    background:var(--sunk2);color:var(--ink);border:1px solid var(--border-strong)}
+  .opp-angle{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
+
+  /* status-coloured rows */
+  tr.st-target td{background:var(--green-bg)!important} tr.st-target td:first-child{box-shadow:inset 3px 0 var(--green)}
+  tr.st-client td{background:var(--green-bg)!important} tr.st-client td:first-child{box-shadow:inset 3px 0 var(--green)}
+  tr.st-called td{background:var(--amber-bg)!important} tr.st-called td:first-child{box-shadow:inset 3px 0 var(--amber)}
+  tr.st-no td{background:var(--red-bg)!important;color:var(--red)!important} tr.st-no td:first-child{box-shadow:inset 3px 0 var(--red)}
+  tr.st-no .nm,tr.st-no a,tr.st-no .cat,tr.st-no .opp,tr.st-no .maps{color:var(--red)!important}
+
+  /* custom status dropdown */
+  .dd{position:relative;display:inline-block}
+  .dd-btn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border-strong);
+    border-radius:9px;padding:7px 11px;font:600 12.5px var(--sans);color:var(--ink);cursor:pointer;min-width:118px;
+    justify-content:space-between}
+  .dd-btn:hover{border-color:var(--ink)}
+  .dd-btn .caret{width:11px;height:11px;opacity:.5}
+  .dd-btn.st-target{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
+  .dd-btn.st-called{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
+  .dd-btn.st-client{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
+  .dd-btn.st-no{color:var(--red);border-color:var(--red-line);background:var(--red-bg)}
+  .dd-menu{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--border-strong);
+    border-radius:11px;box-shadow:0 12px 30px rgba(0,0,0,.13);padding:5px;min-width:150px;display:none}
+  .dd-menu.open{display:block}
+  .dd-opt{display:flex;width:100%;align-items:center;gap:9px;padding:9px 11px;border:none;background:none;
+    border-radius:8px;font:600 13px var(--sans);color:var(--ink);cursor:pointer;text-align:left}
+  .dd-opt:hover{background:var(--sunk2)}
+  .dd-opt .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
+  .dd-opt.st-target .dot,.dd-opt.st-client .dot{background:var(--green)}
+  .dd-opt.st-called .dot{background:var(--amber)} .dd-opt.st-no .dot{background:var(--red)}
+  .notebtn{background:none;border:1px solid var(--border-strong);border-radius:8px;padding:6px 9px;margin-left:6px;
+    cursor:pointer;color:var(--ink-faint);font-size:13px}
+  .notebtn.has{color:var(--ink);border-color:var(--ink)} .notebtn:hover{border-color:var(--ink);color:var(--ink)}
+  .note-row td{background:var(--sunk)!important;padding:0 15px 12px}
+  .note-row textarea{min-height:52px;font-size:13px}
+
+  .empty{padding:44px 22px;text-align:center;color:var(--ink-soft)}
+  .empty h3{margin:0 0 10px;font-size:17px;color:var(--ink);font-weight:800}
+  .empty p{margin:5px auto;max-width:460px;font-size:13.5px;line-height:1.65}
   .log{margin-top:14px;display:flex;flex-direction:column;gap:7px}
-  .job{font-size:12.5px;padding:9px 11px;border-radius:9px;border:1px solid var(--border-strong);
-    background:var(--sunk);color:var(--text-soft)}
-  .job.running{border-color:var(--amber);background:var(--amber-bg);color:#92600a}
-  .job.done{border-color:var(--green);background:var(--green-bg);color:#166534}
-  .job.error{border-color:var(--red);background:var(--red-bg);color:#991b1b}
+  .job{font-size:12.5px;padding:9px 12px;border-radius:10px;border:1px solid var(--border-strong);
+    background:var(--sunk);color:var(--ink-soft)}
+  .job.running{border-color:var(--amber-line);background:var(--amber-bg);color:var(--amber)}
+  .job.done{border-color:var(--green-line);background:var(--green-bg);color:var(--green)}
+  .job.error{border-color:var(--red-line);background:var(--red-bg);color:var(--red)}
 {% endblock %}
 {% block body %}
 <div class="split">
-
-  <!-- LEFT: collection -->
   <div>
     <div class="panel">
-      <div class="panel-h">
-        <h2>Знайти нових клієнтів</h2>
-        <div class="sub">Обери місто й тип бізнесу — я зберу заклади з мапи та знайду їхні контакти.</div>
-      </div>
+      <div class="panel-h"><h2>Знайти нових клієнтів</h2>
+        <div class="sub">Обери місто й тип бізнесу — зберу заклади з мапи та знайду контакти.</div></div>
       <div class="panel-b">
         <form method="post" action="{{ url_for('scrape') }}">
           <label>Країна</label>
@@ -88,40 +109,26 @@
           <div style="margin-top:16px"><button class="btn" type="submit">Зібрати клієнтів</button></div>
         </form>
         <div class="log" id="jobs">
-          {% for j in jobs %}
-            <div class="job {{ j.state }}">{{ j.label }} —
-              {% if j.state=='running' %}збираю, знайдено {{ j.found }}
-              {% elif j.state=='done' %}готово: +{{ j.added }} нових, {{ j.with_email }} з email
-              {% else %}помилка: {{ j.error }}{% endif %}</div>
-          {% endfor %}
+          {% for j in jobs %}<div class="job {{ j.state }}">{{ j.label }} —
+            {% if j.state=='running' %}збираю, знайдено {{ j.found }}
+            {% elif j.state=='done' %}готово: +{{ j.added }} нових
+            {% else %}помилка: {{ j.error }}{% endif %}</div>{% endfor %}
         </div>
       </div>
     </div>
-
     <div class="panel">
-      <div class="panel-h">
-        <h2>Точний фільтр</h2>
-        <div class="sub">Звузити список за пошуком, містом, категорією чи статусом дзвінка.</div>
-      </div>
+      <div class="panel-h"><h2>Точний фільтр</h2><div class="sub">Звузити список пошуком чи категорією.</div></div>
       <div class="panel-b">
         <form method="get" action="{{ url_for('index') }}">
-          <input type="hidden" name="opp" value="{{ opp }}">
+          <input type="hidden" name="opp" value="{{ opp }}"><input type="hidden" name="status" value="{{ filters.status }}">
           <label>Пошук за назвою або email</label>
           <input name="search" value="{{ filters.search }}" placeholder="напр. кав'ярня">
           <div class="two">
-            <div><label>Регіон</label>
-              <select name="region"><option value="">усі</option>
-                {% for r in regions_filter %}<option value="{{ r }}" {{ 'selected' if r==filters.region }}>{{ r }}</option>{% endfor %}
-              </select></div>
-            <div><label>Категорія</label>
-              <select name="category"><option value="">усі</option>
-                {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c==filters.category }}>{{ c }}</option>{% endfor %}
-              </select></div>
+            <div><label>Регіон</label><select name="region"><option value="">усі</option>
+              {% for r in regions_filter %}<option value="{{ r }}" {{ 'selected' if r==filters.region }}>{{ r }}</option>{% endfor %}</select></div>
+            <div><label>Категорія</label><select name="category"><option value="">усі</option>
+              {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c==filters.category }}>{{ c }}</option>{% endfor %}</select></div>
           </div>
-          <label>Статус дзвінка</label>
-          <select name="status"><option value="">усі</option>
-            {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==filters.status }}>{{ LBL[s] }}</option>{% endfor %}
-          </select>
           <div class="row" style="margin-top:15px">
             <button class="btn sm" type="submit">Застосувати</button>
             <a class="btn ghost sm" href="{{ url_for('index') }}">Скинути</a>
@@ -131,70 +138,65 @@
     </div>
   </div>
 
-  <!-- RIGHT: register -->
   <div class="panel">
+    <div class="chips">
+      <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Знайдені</a>
+      <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak') }}">Без сайту</a>
+      <a class="chip {{ 'on' if filters.status=='target' }}" href="{{ url_for('index', status='target') }}">В роботі</a>
+      <a class="chip {{ 'on' if filters.status=='called' }}" href="{{ url_for('index', status='called') }}">Подзвонив</a>
+      <a class="chip {{ 'on' if filters.status=='no' }}" href="{{ url_for('index', status='no') }}">Відмови</a>
+    </div>
     <div class="reg-top">
-      <div class="reg-count">{{ leads|length }} бізнесів у списку</div>
+      <div class="reg-count">{{ leads|length }} у списку</div>
       <a class="btn ghost sm" href="{{ url_for('export', **filters) }}">Експорт у Excel</a>
     </div>
-
-    <div style="padding:14px 18px 0">
-      <div class="chips">
-        <a class="chip {{ 'on' if opp=='weak' and not filters.status }}" href="{{ url_for('index', opp='weak') }}">Варті дзвінка <span class="n">потрібен сайт</span></a>
-        <a class="chip {{ 'on' if filters.status=='target' }}" href="{{ url_for('index', status='target') }}">Позначені в роботу</a>
-        <a class="chip {{ 'on' if filters.status=='called' }}" href="{{ url_for('index', status='called') }}">Вже дзвонив</a>
-        <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Усі</a>
-      </div>
-    </div>
-
-    <div class="bulkbar" id="bulkbar">
-      <b id="bulkCount">0</b> обрано ·
-      <button class="btn sm" type="button" onclick="bulk('target')">Позначити в роботу</button>
+    <div class="bulkbar" id="bulkbar"><b id="bulkCount">0</b> обрано ·
+      <button class="btn sm" type="button" onclick="bulk('target')">В роботу</button>
       <button class="btn ghost sm" type="button" onclick="bulk('called')">Подзвонив</button>
       <button class="btn ghost sm" type="button" onclick="bulk('no')">Відмова</button>
       <button class="btn ghost sm" type="button" onclick="clearSel()">Зняти</button>
     </div>
-
     <div class="scroll">
     <table id="tbl">
       <thead><tr>
         <th class="chk nos"><input type="checkbox" id="selAll" onclick="toggleAll(this)"></th>
-        <th data-k="name">Заклад</th>
-        <th data-k="email">Email</th>
-        <th data-k="phone">Телефон</th>
-        <th data-k="opp">Шанс</th>
-        <th data-k="cat">Тип</th>
-        <th data-k="city">Місто</th>
-        <th class="nos">Мапа</th>
-        <th data-k="status">Статус</th>
+        <th data-k="name">Заклад</th><th data-k="email">Email</th><th data-k="phone">Телефон</th>
+        <th data-k="opp">Шанс</th><th data-k="cat">Тип</th><th data-k="city">Місто</th>
+        <th class="nos">Мапа</th><th class="nos">Статус</th>
       </tr></thead>
       <tbody>
       {% for l in leads %}
         {% set o = opportunity(l) %}
-        <tr data-id="{{ l.id }}">
+        <tr data-id="{{ l.id }}" class="st-{{ l.email_status }}">
           <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onChk()"></td>
           <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span></td>
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
-          <td data-k="opp" data-sort="{{ o.score }}">
-            <span class="opp {{ o.tier }}" title="{{ o.reasons|join(', ') }}">{{ o.reasons[0] }}</span>
-            <span class="opp-angle">{{ o.angle }}</span>
-          </td>
+          <td data-k="opp" data-sort="{{ o.score }}"><span class="opp">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
           <td data-k="cat">{% if l.category %}<span class="cat">{{ l.category }}</span>{% else %}—{% endif %}</td>
           <td data-k="city">{{ l.city or l.address or '—' }}</td>
           <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
-          <td data-k="status">
-            <select class="st st-{{ l.email_status }}" aria-label="статус" onchange="setStatus({{ l.id }}, this)">
-              {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==l.email_status }}>{{ LBL[s] }}</option>{% endfor %}
-            </select>
+          <td style="white-space:nowrap">
+            <div class="dd">
+              <button class="dd-btn st-{{ l.email_status }}" onclick="ddToggle(this,{{ l.id }})">
+                <span>{{ LBL[l.email_status] }}</span>
+                <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="dd-menu">
+                {% for s in statuses %}<button class="dd-opt st-{{ s }}" onclick="ddPick({{ l.id }},'{{ s }}',this)"><span class="dot"></span>{{ LBL[s] }}</button>{% endfor %}
+              </div>
+            </div>
+            <button class="notebtn {{ 'has' if l.notes }}" title="Нотатка" onclick="toggleNote({{ l.id }})">✎</button>
           </td>
         </tr>
+        <tr class="note-row" id="note-{{ l.id }}" style="display:none"><td colspan="9">
+          <textarea placeholder="Нотатка про дзвінок…" onblur="saveNote({{ l.id }},this)">{{ l.notes or '' }}</textarea>
+        </td></tr>
       {% else %}
         <tr><td colspan="9"><div class="empty">
           <h3>Список поки порожній</h3>
-          <p><b>Лід</b> — це потенційний клієнт: бізнес, якому можна продати твої послуги (сайт, рекламу, AI-автоматизацію).</p>
-          <p>Ліворуч обери <b>країну → область → місто</b> і тип бізнесу, натисни <b>«Зібрати клієнтів»</b> — я знайду заклади на мапі та витягну їхні <b>email</b> (пошту для звернення) і телефони.</p>
-          <p>Потім тисни <b>«Варті дзвінка»</b> — покажу тих, у кого <b>немає сайту</b> (їм найлегше щось запропонувати).</p>
+          <p><b>Лід</b> — потенційний клієнт: бізнес, якому можна продати сайт, рекламу чи AI-автоматизацію.</p>
+          <p>Ліворуч обери <b>країну → область → місто</b> і тип, натисни <b>«Зібрати клієнтів»</b> — знайду заклади та їхні контакти. Тоді тисни <b>«Без сайту»</b> — покажу найкращі цілі.</p>
         </div></td></tr>
       {% endfor %}
       </tbody>
@@ -205,50 +207,58 @@
 
 <script>
 const GEO = {{ geo|tojson }};
-const countrySel=document.getElementById('country'), regionSel=document.getElementById('region'),
-      citiesBox=document.getElementById('cities'), cityHint=document.getElementById('cityHint');
-function fillRegions(){ const c=countrySel.value;
-  regionSel.innerHTML=Object.keys(GEO[c].regions).map(r=>`<option value="${r}">${r}</option>`).join(''); fillCities(); }
-function fillCities(){ const list=(GEO[countrySel.value].regions[regionSel.value]||[]);
-  citiesBox.innerHTML=`<label class="all"><input type="checkbox" onclick="allCities(this)"> усі міста регіону</label>`+
-    list.map(c=>`<label><input type="checkbox" name="cities" value="${c}"> ${c}</label>`).join('');
-  cityHint.textContent=`(${list.length})`; }
-function allCities(el){ citiesBox.querySelectorAll('input[name=cities]').forEach(i=>i.checked=el.checked); }
-countrySel.onchange=fillRegions; regionSel.onchange=fillCities; fillRegions();
+const cS=document.getElementById('country'),rS=document.getElementById('region'),
+      cB=document.getElementById('cities'),cH=document.getElementById('cityHint');
+function fillR(){const c=cS.value;rS.innerHTML=Object.keys(GEO[c].regions).map(r=>`<option>${r}</option>`).join('');fillC();}
+function fillC(){const l=(GEO[cS.value].regions[rS.value]||[]);
+  cB.innerHTML=`<label class="all"><input type="checkbox" onclick="allC(this)"> усі міста регіону</label>`+
+    l.map(c=>`<label><input type="checkbox" name="cities" value="${c}"> ${c}</label>`).join('');cH.textContent=`(${l.length})`;}
+function allC(e){cB.querySelectorAll('input[name=cities]').forEach(i=>i.checked=e.checked);}
+cS.onchange=fillR;rS.onchange=fillC;fillR();
 
-function setStatus(id,sel){ sel.className='st st-'+sel.value;
-  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'status='+encodeURIComponent(sel.value)}); }
-function cp(t,b){ navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);}); }
+/* custom status dropdown */
+let openMenu=null;
+function ddToggle(btn){ const m=btn.nextElementSibling;
+  if(openMenu&&openMenu!==m){openMenu.classList.remove('open');}
+  if(m.classList.contains('open')){m.classList.remove('open');openMenu=null;return;}
+  const r=btn.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=r.left+'px';
+  m.classList.add('open');openMenu=m; }
+function ddPick(id,st,opt){ const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn');
+  btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=({new:'новий',target:'в роботі',called:'подзвонив',client:'клієнт',no:'відмова'})[st];
+  const tr=dd.closest('tr'); tr.className='st-'+st; tr.dataset.id&&0;
+  dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
+  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st}); }
+document.addEventListener('click',e=>{ if(openMenu&&!e.target.closest('.dd')){openMenu.classList.remove('open');openMenu=null;} });
+window.addEventListener('scroll',()=>{ if(openMenu){openMenu.classList.remove('open');openMenu=null;} },true);
 
-function sel(){ return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value); }
-function onChk(){ const n=sel().length; document.getElementById('bulkCount').textContent=n;
-  document.getElementById('bulkbar').classList.toggle('show',n>0); }
-function toggleAll(el){ document.querySelectorAll('.rowchk').forEach(c=>c.checked=el.checked); onChk(); }
-function clearSel(){ document.querySelectorAll('.rowchk,#selAll').forEach(c=>c.checked=false); onChk(); }
-async function bulk(status){ const ids=sel(); if(!ids.length)return;
-  const b=new URLSearchParams(); ids.forEach(i=>b.append('ids',i)); b.append('status',status);
-  await fetch('/leads/bulk-status',{method:'POST',body:b}); location.reload(); }
+function toggleNote(id){ const r=document.getElementById('note-'+id); r.style.display=r.style.display==='none'?'table-row':'none';
+  if(r.style.display!=='none')r.querySelector('textarea').focus(); }
+function saveNote(id,ta){ const nb=document.querySelector(`button.notebtn[onclick="toggleNote(${id})"]`);
+  if(nb)nb.classList.toggle('has',ta.value.trim().length>0);
+  fetch(`/lead/${id}/note`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'note='+encodeURIComponent(ta.value)}); }
+function cp(t,b){navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);});}
+
+function sel(){return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value);}
+function onChk(){const n=sel().length;document.getElementById('bulkCount').textContent=n;document.getElementById('bulkbar').classList.toggle('show',n>0);}
+function toggleAll(e){document.querySelectorAll('.rowchk').forEach(c=>c.checked=e.checked);onChk();}
+function clearSel(){document.querySelectorAll('.rowchk,#selAll').forEach(c=>c.checked=false);onChk();}
+async function bulk(st){const ids=sel();if(!ids.length)return;const b=new URLSearchParams();ids.forEach(i=>b.append('ids',i));b.append('status',st);
+  await fetch('/leads/bulk-status',{method:'POST',body:b});location.reload();}
 
 let dir={};
-function sortBy(th){ const k=th.dataset.k; if(!k)return; const tb=document.querySelector('#tbl tbody');
-  const d=dir[k]=-(dir[k]||1); const rows=[...tb.querySelectorAll('tr')].filter(r=>r.dataset.id);
-  rows.sort((a,b)=>{ const ca=a.querySelector(`[data-k="${k}"]`),cb=b.querySelector(`[data-k="${k}"]`);
-    const sa=ca?.dataset.sort,sb=cb?.dataset.sort;
-    if(sa!==undefined&&sb!==undefined)return (Number(sa)-Number(sb))*d;
-    const av=(ca?.innerText||'').trim().toLowerCase(),bv=(cb?.innerText||'').trim().toLowerCase();
-    return av<bv?d:av>bv?-d:0; });
-  rows.forEach(r=>tb.appendChild(r)); }
+function sortBy(th){const k=th.dataset.k;if(!k)return;const tb=document.querySelector('#tbl tbody');const d=dir[k]=-(dir[k]||1);
+  const rows=[...tb.querySelectorAll('tr[data-id]')];
+  rows.sort((a,b)=>{const ca=a.querySelector(`[data-k="${k}"]`),cb=b.querySelector(`[data-k="${k}"]`);
+    const sa=ca?.dataset.sort,sb=cb?.dataset.sort;if(sa!==undefined&&sb!==undefined)return (Number(sa)-Number(sb))*d;
+    const av=(ca?.innerText||'').trim().toLowerCase(),bv=(cb?.innerText||'').trim().toLowerCase();return av<bv?d:av>bv?-d:0;});
+  rows.forEach(r=>{tb.appendChild(r);const nr=document.getElementById('note-'+r.dataset.id);if(nr)tb.appendChild(nr);});}
 document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>sortBy(th));
 
-async function pollJobs(){ try{ const jobs=await (await fetch('/jobs.json')).json();
-  const box=document.getElementById('jobs');
-  if(box) box.innerHTML=jobs.map(j=>{ const t=j.state==='running'?`збираю, знайдено ${j.found}`
-    :j.state==='done'?`готово: +${j.added} нових, ${j.with_email} з email`:`помилка: ${j.error}`;
-    return `<div class="job ${j.state}">${j.label} — ${t}</div>`; }).join('');
-  const run=jobs.some(j=>j.state==='running');
-  if(run){window._had=true;setTimeout(pollJobs,2000);} else if(window._had){window._had=false;location.reload();}
-  }catch(e){setTimeout(pollJobs,4000);} }
+async function pollJobs(){try{const jobs=await (await fetch('/jobs.json')).json();const box=document.getElementById('jobs');
+  if(box)box.innerHTML=jobs.map(j=>{const t=j.state==='running'?`збираю, знайдено ${j.found}`:j.state==='done'?`готово: +${j.added} нових`:`помилка: ${j.error}`;
+    return `<div class="job ${j.state}">${j.label} — ${t}</div>`;}).join('');
+  const run=jobs.some(j=>j.state==='running');if(run){window._had=true;setTimeout(pollJobs,2000);}else if(window._had){window._had=false;location.reload();}
+  }catch(e){setTimeout(pollJobs,4000);}}
 pollJobs();
 </script>
 {% endblock %}
