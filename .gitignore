@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+data/
+*.db
+*.csv
+leadgen_preview.html
+.claude/
+.DS_Store

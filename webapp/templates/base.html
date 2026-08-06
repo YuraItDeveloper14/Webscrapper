@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}leadgen{% endblock %}</title>
+{% block head %}{% endblock %}
+<style>
+  /* ============ cartographic field console ============ */
+  :root{
+    --paper:#e6e7df; --card:#f4f4ee; --sunk:#ecede5;
+    --ink:#17211d; --ink-soft:#5c665f; --ink-faint:#8b948d;
+    --contour:#d3d2c4; --contour-2:#c2c2b2;
+    --teal:#1c6e68; --teal-deep:#155450; --teal-wash:rgba(28,110,104,.10);
+    --marker:#c6552b; --marker-wash:rgba(198,85,43,.12);
+    --ok:#1c6e68; --warn:#a6742a; --err:#b23b3b;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0f1618; --card:#161f21; --sunk:#121a1c;
+      --ink:#e7ebe6; --ink-soft:#93a09a; --ink-faint:#6b7873;
+      --contour:#26322f; --contour-2:#324340;
+      --teal:#40b8ae; --teal-deep:#2e8f87; --teal-wash:rgba(64,184,174,.12);
+      --marker:#e0764b; --marker-wash:rgba(224,118,75,.14);
+      --ok:#40b8ae; --warn:#d0a24e; --err:#e06a6a;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:14.5px/1.55 var(--sans)}
+  a{color:var(--teal-deep);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+
+  /* ruler: a graduated coordinate scale used as the signature divider */
+  .ruler{height:9px;
+    background:
+      repeating-linear-gradient(90deg,var(--contour-2) 0 1px,transparent 1px 14px) bottom/100% 6px no-repeat,
+      repeating-linear-gradient(90deg,var(--contour-2) 0 1px,transparent 1px 70px) bottom/100% 9px no-repeat;
+    opacity:.9}
+
+  /* ---- header / instrument readout ---- */
+  header.top{background:var(--card);border-bottom:1px solid var(--contour)}
+  .top-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    padding:16px 26px;max-width:1280px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand svg{display:block}
+  .brand .name{font-weight:680;font-size:17px;letter-spacing:-.2px}
+  .brand .name b{color:var(--teal-deep);font-weight:680}
+  .brand .tag{font:11px/1 var(--mono);color:var(--ink-faint);letter-spacing:.5px;
+    text-transform:uppercase;margin-top:3px}
+  .nav{display:flex;gap:4px;background:var(--sunk);border:1px solid var(--contour);
+    border-radius:9px;padding:3px}
+  .nav a{padding:6px 14px;border-radius:7px;font:600 13px/1 var(--sans);color:var(--ink-soft);
+    text-decoration:none}
+  .nav a:hover{color:var(--ink);text-decoration:none}
+  .nav a.on{background:var(--card);color:var(--teal-deep);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .readout{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap}
+  .gauge{min-width:58px}
+  .gauge .v{font:600 22px/1 var(--mono);letter-spacing:-.5px;display:block}
+  .gauge .v.hot{color:var(--marker)}
+  .gauge .l{font:10px/1.4 var(--mono);color:var(--ink-faint);text-transform:uppercase;
+    letter-spacing:1px;margin-top:6px;display:block;
+    border-top:1px solid var(--contour);padding-top:5px}
+
+  main{max-width:1280px;margin:0 auto;padding:24px 26px 60px}
+  .flash{padding:11px 15px;border-radius:9px;margin-bottom:16px;font-size:13.5px;
+    border-left:3px solid;background:var(--card)}
+  .flash.ok{border-color:var(--ok);color:var(--ink)}
+  .flash.error{border-color:var(--err);color:var(--ink)}
+
+  .split{display:grid;grid-template-columns:322px 1fr;gap:24px;align-items:start}
+  @media(max-width:920px){.split{grid-template-columns:1fr}}
+
+  .panel{background:var(--card);border:1px solid var(--contour);border-radius:13px;overflow:hidden}
+  .panel + .panel{margin-top:18px}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 17px 0}
+  .panel-h h2{margin:0;font:600 11.5px/1 var(--mono);letter-spacing:1.3px;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .panel-b{padding:15px 17px 18px}
+
+  label{display:block;font-size:12px;color:var(--ink-soft);margin:13px 0 5px}
+  label:first-child{margin-top:0}
+  input,select,textarea{width:100%;background:var(--sunk);border:1px solid var(--contour);
+    color:var(--ink);border-radius:8px;padding:9px 11px;font:14px/1.4 var(--sans)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);
+    box-shadow:0 0 0 3px var(--teal-wash)}
+  textarea{resize:vertical;min-height:46px;font-family:var(--mono);font-size:13px}
+  .num{font-family:var(--mono)}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--teal);color:#fff;
+    border:none;border-radius:8px;padding:10px 15px;font:600 13.5px/1 var(--sans);
+    cursor:pointer;transition:background .15s}
+  .btn:hover{background:var(--teal-deep);text-decoration:none}
+  .btn.ghost{background:transparent;border:1px solid var(--contour);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--teal);color:var(--teal-deep)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+  /* ---- leads register ---- */
+  .reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:15px 18px}
+  .reg-count{font:12px/1.4 var(--mono);color:var(--ink-soft)}
+  .tick{display:inline-block;padding:2px 8px;border:1px solid var(--contour);border-radius:20px;
+    font:11px/1.4 var(--mono);color:var(--ink-soft);margin-left:6px;white-space:nowrap}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{font:600 10.5px/1 var(--mono);letter-spacing:1px;text-transform:uppercase;
+    color:var(--ink-faint);text-align:left;padding:9px 12px;
+    border-top:1px solid var(--contour);border-bottom:1px solid var(--contour);
+    background:var(--sunk);position:sticky;top:0}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--contour);vertical-align:middle}
+  tbody tr:hover td{background:var(--sunk)}
+  .name-cell{display:flex;align-items:center;gap:9px;min-width:0}
+  .name-cell .nm{font-weight:560;overflow:hidden;text-overflow:ellipsis}
+  /* the map pin: filled = reachable target (has email), hollow = not yet */
+  .pin{flex:0 0 auto;width:11px;height:11px;border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg);border:1.5px solid var(--ink-faint);position:relative}
+  .pin.on{background:var(--marker);border-color:var(--marker)}
+  .em{font-family:var(--mono);font-size:12.5px}
+  .em a{color:var(--marker)}
+  .em .none{color:var(--ink-faint)}
+  .ph{font-family:var(--mono);font-size:12px;color:var(--ink-soft);white-space:nowrap}
+  .cat{display:inline-block;padding:1px 9px;border-radius:5px;font:11px/1.7 var(--mono);
+    color:var(--teal-deep);background:var(--teal-wash);white-space:nowrap}
+  .addr{color:var(--ink-soft);font-size:12.5px}
+  select.status{width:auto;padding:5px 8px;font:12px/1 var(--mono);border-radius:6px}
+
+  /* ---- plot log (scrape jobs) ---- */
+  .log{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+  .job{font:12px/1.4 var(--mono);padding:9px 11px;border-radius:8px;
+    border:1px solid var(--contour);background:var(--sunk);color:var(--ink-soft)}
+  .job .id{color:var(--ink-faint)}
+  .job.running{border-color:var(--warn)}
+  .job.running .id{color:var(--warn)}
+  .job.done{border-color:var(--ok)}
+  .job.error{border-color:var(--err);color:var(--ink)}
+  .empty{padding:34px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px}
+
+  /* filters: paired fields */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hint{color:var(--ink-faint);font-family:var(--mono);font-size:11px}
+
+  /* city picker */
+  .cities{display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto;
+    border:1px solid var(--contour);border-radius:8px;padding:9px 11px;background:var(--sunk)}
+  .cities label{margin:0;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer}
+  .cities .cityall{border-bottom:1px solid var(--contour);padding-bottom:6px;margin-bottom:2px;
+    color:var(--ink-soft);font:600 11px/1.6 var(--mono);text-transform:uppercase;letter-spacing:.6px}
+  .cities input[type=checkbox]{width:auto}
+  input[type=checkbox]{accent-color:var(--teal)}
+
+  /* selection + bulk bar */
+  th.chk,td.chk{width:34px;text-align:center;padding-left:14px}
+  .rowchk,#selAll{width:auto;cursor:pointer}
+  .bulkbar{display:none;align-items:center;gap:11px;padding:11px 18px;
+    border-top:1px solid var(--contour);background:var(--teal-wash);font-size:13px}
+  .bulkbar.show{display:flex}
+  .bulkbar #bulkCount{font:600 12px/1 var(--mono);color:var(--teal-deep)}
+
+  /* copy button + maps glyph */
+  .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:13px;
+    padding:0 3px;opacity:0;transition:opacity .12s;vertical-align:middle}
+  tr:hover .cp{opacity:1}
+  .cp:hover{color:var(--teal)}
+  .maps{display:inline-block;font-size:17px;line-height:1;color:var(--teal);text-decoration:none;
+    transform:translateY(1px)}
+  .maps:hover{color:var(--marker);text-decoration:none}
+  .ph a,a.ph{color:var(--ink-soft)}
+
+  /* opportunity badge */
+  .opp{display:inline-block;padding:2px 8px;border-radius:6px;font:600 11px/1.5 var(--mono);
+    white-space:nowrap;cursor:default}
+  .opp.hot{background:var(--marker-wash);color:var(--marker);border:1px solid var(--marker)}
+  .opp.warm{background:rgba(166,116,42,.12);color:var(--warn);border:1px solid var(--warn)}
+  .opp.cold{background:var(--sunk);color:var(--ink-faint);border:1px solid var(--contour)}
+  .opp-why{font:11px/1.4 var(--mono);color:var(--ink-soft);margin-top:3px}
+  .opp-angle{color:var(--teal-deep)}
+
+  /* map page */
+  .map-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:13px 16px;flex-wrap:wrap;border-bottom:1px solid var(--contour)}
+  .map-filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0}
+  .map-filters select{width:auto;padding:7px 10px}
+  .map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .map-legend .lg{display:flex;align-items:center;gap:6px;font:12px/1 var(--mono);color:var(--ink-soft)}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid #fff}
+  .dot.hot{background:var(--marker)} .dot.warm{background:var(--warn)} .dot.cold{background:var(--ink-faint)}
+  #map{height:calc(100vh - 210px);min-height:440px;width:100%;background:var(--sunk);z-index:0}
+  .leaflet-popup-content .pp{font:13px/1.5 var(--sans);color:var(--ink)}
+  .pp a{color:var(--teal-deep)} .pp .none{color:var(--ink-faint)}
+  .pp-opp{margin-top:6px;font:600 11px/1.5 var(--mono)}
+  .pp-opp.opp-hot{color:var(--marker)} .pp-opp.opp-warm{color:var(--warn)} .pp-opp.opp-cold{color:var(--ink-faint)}
+  .pp-meta{color:var(--ink-soft);font:11px/1.4 var(--mono);margin-top:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 22s7-6.1 7-12A7 7 0 1 0 5 10c0 5.9 7 12 7 12Z"
+              fill="var(--teal)" stroke="var(--teal-deep)" stroke-width="1.2"/>
+        <circle cx="12" cy="10" r="2.6" fill="var(--card)"/>
+      </svg>
+      <div>
+        <div class="name">lead<b>gen</b></div>
+        <div class="tag">мапа → контакти</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('index') }}" class="{{ 'on' if request.path == '/' }}">Реєстр</a>
+      <a href="{{ url_for('map_view') }}" class="{{ 'on' if request.path == '/map' }}">Карта</a>
+    </nav>
+    <div class="readout">
+      <div class="gauge"><span class="v num">{{ stats.total }}</span><span class="l">ліди</span></div>
+      <div class="gauge"><span class="v num hot">{{ stats.with_email }}</span><span class="l">з email</span></div>
+      <div class="gauge"><span class="v num">{{ stats.with_website }}</span><span class="l">сайти</span></div>
+      {% if prospects is defined %}<div class="gauge"><span class="v num hot">{{ prospects }}</span><span class="l">перспективні</span></div>{% endif %}
+      <div class="gauge"><span class="v num">{{ ((stats.with_email / stats.total * 100)|round(0)|int) if stats.total else 0 }}%</span><span class="l">охоплення</span></div>
+    </div>
+  </div>
+  <div class="ruler"></div>
+</header>
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

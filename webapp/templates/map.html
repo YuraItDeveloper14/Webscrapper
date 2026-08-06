@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}leadgen · карта{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+{% block body %}
+<div class="panel">
+  <div class="map-bar">
+    <form method="get" action="{{ url_for('map_view') }}" class="map-filters">
+      <select name="country">
+        <option value="">усі країни</option>
+        {% for c in countries_filter %}<option value="{{ c }}" {{ 'selected' if c==filters.country }}>{{ c }}</option>{% endfor %}
+      </select>
+      <select name="opp">
+        <option value="" {{ 'selected' if opp=='' }}>усі можливості</option>
+        <option value="hot" {{ 'selected' if opp=='hot' }}>🔥 гарячі</option>
+        <option value="weak" {{ 'selected' if opp=='weak' }}>слабкий/нема сайту</option>
+        <option value="nosite" {{ 'selected' if opp=='nosite' }}>зовсім без сайту</option>
+      </select>
+      <select name="has_email">
+        <option value="" {{ 'selected' if filters.has_email=='' }}>email байдуже</option>
+        <option value="yes" {{ 'selected' if filters.has_email=='yes' }}>лише з email</option>
+      </select>
+      <button class="btn" type="submit">Показати</button>
+    </form>
+    <div class="map-legend">
+      <span class="reg-count">{{ plotted }} на карті</span>
+      <span class="lg"><i class="dot hot"></i>гарячий</span>
+      <span class="lg"><i class="dot warm"></i>теплий</span>
+      <span class="lg"><i class="dot cold"></i>є сайт</span>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const PTS = {{ points|tojson }};
+const css = getComputedStyle(document.documentElement);
+const COLORS = {
+  hot: css.getPropertyValue('--marker').trim(),
+  warm: css.getPropertyValue('--warn').trim(),
+  cold: css.getPropertyValue('--ink-faint').trim(),
+};
+const map = L.map('map', {scrollWheelZoom: true});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '© OpenStreetMap'
+}).addTo(map);
+
+function esc(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function popup(p){
+  const site = p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">сайт</a> · ` : '';
+  const email = p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a><br>` : '<span class="none">без email</span><br>';
+  const phone = p.phone ? `<a href="tel:${esc(p.phone).replace(/[ ()]/g,'')}">${esc(p.phone)}</a> · ` : '';
+  return `<div class="pp"><b>${esc(p.name)}</b><br>${email}${phone}${site}
+    <a href="${esc(p.gmaps)}" target="_blank" rel="noopener">Google Maps</a>
+    <div class="pp-opp opp-${p.tier}">${p.tier==='hot'?'🔥':'●'} ${p.score} · ${esc(p.angle)}</div>
+    <div class="pp-meta">${esc(p.cat)} · ${esc(p.city)}</div></div>`;
+}
+const markers = [];
+PTS.forEach(p=>{
+  const m = L.circleMarker([p.lat, p.lon], {
+    radius: p.tier==='hot'?7:6, color:'#fff', weight:1,
+    fillColor: COLORS[p.tier], fillOpacity: 0.9
+  }).bindPopup(popup(p));
+  m._tier = p.tier;
+  m.addTo(map); markers.push(m);
+});
+if (markers.length){
+  map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
+} else {
+  map.setView([49.0, 25.0], 5);  // central-eastern Europe fallback
+}
+</script>
+{% endblock %}

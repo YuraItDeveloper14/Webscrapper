@@ -1,0 +1,4 @@
+# Optional — only needed for the Google Maps CLI source (leadgen/scrape_maps.py).
+# The web panel and the OpenStreetMap source do NOT need this, so deployments
+# stay lean (no headless browser on the server).
+playwright==1.48.0

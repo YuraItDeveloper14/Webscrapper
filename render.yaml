@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: leadgen
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python serve.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: SECRET_KEY
+        generateValue: true
+    # NOTE: Render's free web services have an ephemeral filesystem, so the
+    # SQLite DB in data/ resets on each deploy. To keep leads permanently, add a
+    # paid disk mounted at /app/data, or switch to a hosted Postgres.
