@@ -55,7 +55,7 @@ async def geocode_city(city: str, client: httpx.AsyncClient) -> tuple[float, flo
     return (minlat, minlon, maxlat, maxlon)  # south, west, north, east
 
 
-def _build_query(filters: list[str], bbox: tuple, timeout: int = 90) -> str:
+def _build_query(filters: list[str], bbox: tuple, timeout: int = 90, out_limit: int = 600) -> str:
     s, w, n, e = bbox
     box = f"{s},{w},{n},{e}"
     parts = []
@@ -64,7 +64,8 @@ def _build_query(filters: list[str], bbox: tuple, timeout: int = 90) -> str:
         parts.append(f"  node[{f}]({box});")
         parts.append(f"  way[{f}]({box});")
     body = "\n".join(parts)
-    return f"[out:json][timeout:{timeout}];\n(\n{body}\n);\nout center tags;"
+    # cap how many elements Overpass returns so whole-region queries stay fast
+    return f"[out:json][timeout:{timeout}];\n(\n{body}\n);\nout center tags {out_limit};"
 
 
 async def _overpass(query: str, client: httpx.AsyncClient, attempts: int = 3) -> list[dict]:
@@ -138,7 +139,7 @@ async def scrape_osm(geocode_q: str, category: str, max_results: int = 200,
     geo = {"country": country, "region": region, "city": city or geocode_q.split(",")[0].strip()}
     async with httpx.AsyncClient() as client:
         bbox = await geocode_city(geocode_q, client)
-        query = _build_query(filters, bbox)
+        query = _build_query(filters, bbox, out_limit=max_results + 100)
         elements = await _overpass(query, client)
     leads, seen = [], set()
     for el in elements:

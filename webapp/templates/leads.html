@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}leadgen{% endblock %}
-{% set LBL = {'new':'новий','target':'в роботі','called':'подзвонив','client':'клієнт','no':'відмова'} %}
+{% set LBL = {'new':'новий','marked':'позначення','success':'успішні','rejected':'відмова'} %}
 {% block style %}
   .chips{display:flex;gap:8px;flex-wrap:wrap;padding:15px 19px 0}
   .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;
@@ -8,25 +8,31 @@
     font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
   .chip:hover{border-color:var(--ink);color:var(--ink)}
   .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
-  .cities{display:flex;flex-direction:column;gap:1px;max-height:168px;overflow:auto;
-    border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:var(--sunk)}
-  .cities label{margin:0;display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink);
-    font-weight:400;cursor:pointer;padding:2px 0}
-  .cities .all{font-weight:600;color:var(--ink-soft);border-bottom:1px solid var(--border);
-    padding-bottom:6px;margin-bottom:2px}
-  .cities input{width:auto} input[type=checkbox]{accent-color:var(--ink);cursor:pointer;width:16px;height:16px}
+
+  /* custom form dropdowns */
+  .csel{position:relative;margin-top:6px}
+  .csel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--panel);border:1px solid var(--border-strong);border-radius:10px;padding:11px 13px;
+    font:600 14.5px var(--sans);color:var(--ink);cursor:pointer}
+  .csel-btn:hover{border-color:var(--ink)} .csel-btn .cv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .csel-btn .caret{width:13px;height:13px;opacity:.5;flex:0 0 auto}
+  .csel-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:40;background:var(--panel);
+    border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.14);
+    padding:6px;max-height:280px;overflow:auto;display:none}
+  .csel-menu.open{display:block}
+  .csel-opt{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:none;
+    border-radius:9px;font:500 14px var(--sans);color:var(--ink);cursor:pointer}
+  .csel-opt:hover{background:var(--sunk2)} .csel-opt.sel{background:var(--ink);color:#fff;font-weight:600}
 
   .reg-top{display:flex;align-items:center;gap:14px;padding:16px 19px 0}
   .reg-count{font-size:13px;color:var(--ink-soft);font-weight:600;white-space:nowrap}
   .qs{position:relative;flex:1;max-width:360px;margin:0}
   .qs input{width:100%;padding:9px 32px 9px 13px;border-radius:999px;font-size:13.5px}
-  .qs-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);
-    font-size:13px;font-weight:700}
-  .qs-x:hover{color:var(--ink)}
+  .qs-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);font-size:13px;font-weight:700}
   .reg-top > .btn{margin-left:auto}
   .bulkbar{display:none;align-items:center;gap:10px;margin:14px 19px 0;padding:11px 14px;
     background:var(--sunk2);border:1px solid var(--border-strong);border-radius:11px;font-size:13.5px}
-  .bulkbar.show{display:flex} .bulkbar b{color:var(--ink)}
+  .bulkbar.show{display:flex}
   .scroll{overflow-x:auto;margin-top:12px}
   table{width:100%;border-collapse:collapse;font-size:14px}
   thead th{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint);
@@ -40,86 +46,69 @@
   .em a{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
   .em .none,.ph .none{color:var(--ink-faint)}
   .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap}
-  .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;
-    opacity:0;transition:.12s} tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
-  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
-    background:var(--sunk2);color:var(--ink-soft)}
+  .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;opacity:0;transition:.12s}
+  tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
+  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;background:var(--sunk2);color:var(--ink-soft)}
   .maps{color:var(--ink-soft);font-weight:600;font-size:13px;border-bottom:1px solid var(--border-strong)}
   .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;
     background:var(--sunk2);color:var(--ink);border:1px solid var(--border-strong)}
+  .opp.has-site{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-line)}
   .opp-angle{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
 
-  /* status-coloured rows */
-  tr.st-target td{background:var(--green-bg)!important} tr.st-target td:first-child{box-shadow:inset 3px 0 var(--green)}
-  tr.st-client td{background:var(--green-bg)!important} tr.st-client td:first-child{box-shadow:inset 3px 0 var(--green)}
-  tr.st-called td{background:var(--amber-bg)!important} tr.st-called td:first-child{box-shadow:inset 3px 0 var(--amber)}
-  tr.st-no td{background:var(--red-bg)!important;color:var(--red)!important} tr.st-no td:first-child{box-shadow:inset 3px 0 var(--red)}
-  tr.st-no .nm,tr.st-no a,tr.st-no .cat,tr.st-no .opp,tr.st-no .maps{color:var(--red)!important}
+  tr.st-marked td{background:var(--yellow-bg)!important} tr.st-marked td:first-child{box-shadow:inset 3px 0 var(--yellow)}
+  tr.st-success td{background:var(--green-bg)!important} tr.st-success td:first-child{box-shadow:inset 3px 0 var(--green)}
+  tr.st-rejected td{background:var(--red-bg)!important;color:var(--red)!important} tr.st-rejected td:first-child{box-shadow:inset 3px 0 var(--red)}
+  tr.st-rejected .nm,tr.st-rejected a,tr.st-rejected .cat,tr.st-rejected .opp,tr.st-rejected .maps{color:var(--red)!important}
 
-  /* custom status dropdown */
   .dd{position:relative;display:inline-block}
   .dd-btn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border-strong);
-    border-radius:9px;padding:7px 11px;font:600 12.5px var(--sans);color:var(--ink);cursor:pointer;min-width:118px;
-    justify-content:space-between}
-  .dd-btn:hover{border-color:var(--ink)}
-  .dd-btn .caret{width:11px;height:11px;opacity:.5}
-  .dd-btn.st-target{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
-  .dd-btn.st-called{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
-  .dd-btn.st-client{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
-  .dd-btn.st-no{color:var(--red);border-color:var(--red-line);background:var(--red-bg)}
-  .dd-menu{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--border-strong);
-    border-radius:11px;box-shadow:0 12px 30px rgba(0,0,0,.13);padding:5px;min-width:150px;display:none}
+    border-radius:9px;padding:7px 11px;font:600 12.5px var(--sans);color:var(--ink);cursor:pointer;min-width:120px;justify-content:space-between}
+  .dd-btn:hover{border-color:var(--ink)} .dd-btn .caret{width:11px;height:11px;opacity:.5}
+  .dd-btn.st-marked{color:var(--yellow);border-color:var(--yellow-line);background:var(--yellow-bg)}
+  .dd-btn.st-success{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
+  .dd-btn.st-rejected{color:var(--red);border-color:var(--red-line);background:var(--red-bg)}
+  .dd-menu{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--border-strong);border-radius:11px;
+    box-shadow:0 12px 30px rgba(0,0,0,.13);padding:5px;min-width:150px;display:none}
   .dd-menu.open{display:block}
   .dd-opt{display:flex;width:100%;align-items:center;gap:9px;padding:9px 11px;border:none;background:none;
     border-radius:8px;font:600 13px var(--sans);color:var(--ink);cursor:pointer;text-align:left}
-  .dd-opt:hover{background:var(--sunk2)}
-  .dd-opt .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
-  .dd-opt.st-target .dot,.dd-opt.st-client .dot{background:var(--green)}
-  .dd-opt.st-called .dot{background:var(--amber)} .dd-opt.st-no .dot{background:var(--red)}
-  .notebtn{background:none;border:1px solid var(--border-strong);border-radius:8px;padding:6px 9px;margin-left:6px;
-    cursor:pointer;color:var(--ink-faint);font-size:13px}
+  .dd-opt:hover{background:var(--sunk2)} .dd-opt .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
+  .dd-opt.st-marked .dot{background:var(--yellow)} .dd-opt.st-success .dot{background:var(--green)} .dd-opt.st-rejected .dot{background:var(--red)}
+  .notebtn{background:none;border:1px solid var(--border-strong);border-radius:8px;padding:6px 9px;margin-left:6px;cursor:pointer;color:var(--ink-faint);font-size:13px}
   .notebtn.has{color:var(--ink);border-color:var(--ink)} .notebtn:hover{border-color:var(--ink);color:var(--ink)}
-  .note-row td{background:var(--sunk)!important;padding:0 15px 12px}
-  .note-row textarea{min-height:52px;font-size:13px}
+  .note-row td{background:var(--sunk)!important;padding:0 15px 12px} .note-row textarea{min-height:52px;font-size:13px}
 
   .empty{padding:44px 22px;text-align:center;color:var(--ink-soft)}
   .empty h3{margin:0 0 10px;font-size:17px;color:var(--ink);font-weight:800}
   .empty p{margin:5px auto;max-width:460px;font-size:13.5px;line-height:1.65}
-  .log{margin-top:14px;display:flex;flex-direction:column;gap:7px}
-  .job{font-size:12.5px;padding:9px 12px;border-radius:10px;border:1px solid var(--border-strong);
-    background:var(--sunk);color:var(--ink-soft)}
-  .job.running{border-color:var(--amber-line);background:var(--amber-bg);color:var(--amber)}
+
+  /* job status — separate strip below, with spinner */
+  .jobwrap{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+  .job{display:flex;align-items:center;gap:11px;font-size:13.5px;font-weight:600;padding:13px 16px;
+    border-radius:12px;border:1px solid var(--border-strong);background:var(--panel);color:var(--ink-soft)}
+  .job.running{border-color:var(--yellow-line);background:var(--yellow-bg);color:var(--yellow)}
   .job.done{border-color:var(--green-line);background:var(--green-bg);color:var(--green)}
   .job.error{border-color:var(--red-line);background:var(--red-bg);color:var(--red)}
+  .spin{width:17px;height:17px;border:2.5px solid currentColor;border-right-color:transparent;
+    border-radius:50%;animation:sp .7s linear infinite;flex:0 0 auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
 {% endblock %}
 {% block body %}
 <div class="split">
   <div>
     <div class="panel">
       <div class="panel-h"><h2>Знайти нових клієнтів</h2>
-        <div class="sub">Обери місто й тип бізнесу — зберу заклади з мапи та знайду контакти.</div></div>
+        <div class="sub">Обери область і тип бізнесу — зберу всі заклади області та знайду контакти.</div></div>
       <div class="panel-b">
-        <form method="post" action="{{ url_for('scrape') }}">
-          <label>Країна</label>
-          <select name="country" id="country">
-            {% for name, meta in geo.items() %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
-          </select>
-          <label>Регіон / область</label>
-          <select id="region"></select>
-          <label>Міста <span class="hint" id="cityHint"></span></label>
-          <div class="cities" id="cities"></div>
-          <label>Тип бізнесу</label>
-          <select name="category">
-            {% for c in osm_categories %}<option value="{{ c }}" {{ 'selected' if c=='cafe' }}>{{ c }}</option>{% endfor %}
-          </select>
-          <div style="margin-top:16px"><button class="btn" type="submit">Зібрати клієнтів</button></div>
+        <form method="post" action="{{ url_for('scrape') }}" id="scrapeForm">
+          <label>Країна</label><div id="dd-country"></div>
+          <label>Область / регіон</label><div id="dd-region"></div>
+          <label>Тип бізнесу</label><div id="dd-category"></div>
+          <input type="hidden" name="country" id="f-country">
+          <input type="hidden" name="region" id="f-region">
+          <input type="hidden" name="category" id="f-category">
+          <div style="margin-top:18px"><button class="btn" type="submit">Зібрати клієнтів</button></div>
         </form>
-        <div class="log" id="jobs">
-          {% for j in jobs %}<div class="job {{ j.state }}">{{ j.label }} —
-            {% if j.state=='running' %}збираю, знайдено {{ j.found }}
-            {% elif j.state=='done' %}готово: +{{ j.added }} нових
-            {% else %}помилка: {{ j.error }}{% endif %}</div>{% endfor %}
-        </div>
       </div>
     </div>
   </div>
@@ -128,23 +117,23 @@
     <div class="chips">
       <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Знайдені</a>
       <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak') }}">Без сайту</a>
-      <a class="chip {{ 'on' if filters.status=='target' }}" href="{{ url_for('index', status='target') }}">В роботі</a>
-      <a class="chip {{ 'on' if filters.status=='called' }}" href="{{ url_for('index', status='called') }}">Подзвонив</a>
-      <a class="chip {{ 'on' if filters.status=='no' }}" href="{{ url_for('index', status='no') }}">Відмови</a>
+      <a class="chip {{ 'on' if filters.status=='marked' }}" href="{{ url_for('index', status='marked') }}">Позначення</a>
+      <a class="chip {{ 'on' if filters.status=='success' }}" href="{{ url_for('index', status='success') }}">Успішні</a>
+      <a class="chip {{ 'on' if filters.status=='rejected' }}" href="{{ url_for('index', status='rejected') }}">Відмови</a>
     </div>
     <div class="reg-top">
       <div class="reg-count">{{ leads|length }} у списку</div>
       <form method="get" action="{{ url_for('index') }}" class="qs">
         <input type="hidden" name="opp" value="{{ opp }}"><input type="hidden" name="status" value="{{ filters.status }}">
         <input name="search" value="{{ filters.search }}" placeholder="пошук за назвою або email…">
-        {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}" title="очистити">✕</a>{% endif %}
+        {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}">✕</a>{% endif %}
       </form>
       <a class="btn ghost sm" href="{{ url_for('export', **filters) }}">Експорт у Excel</a>
     </div>
     <div class="bulkbar" id="bulkbar"><b id="bulkCount">0</b> обрано ·
-      <button class="btn sm" type="button" onclick="bulk('target')">В роботу</button>
-      <button class="btn ghost sm" type="button" onclick="bulk('called')">Подзвонив</button>
-      <button class="btn ghost sm" type="button" onclick="bulk('no')">Відмова</button>
+      <button class="btn sm" type="button" onclick="bulk('marked')">Позначити</button>
+      <button class="btn ghost sm" type="button" onclick="bulk('success')">Успішний</button>
+      <button class="btn ghost sm" type="button" onclick="bulk('rejected')">Відмова</button>
       <button class="btn ghost sm" type="button" onclick="clearSel()">Зняти</button>
     </div>
     <div class="scroll">
@@ -163,13 +152,13 @@
           <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span></td>
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
-          <td data-k="opp" data-sort="{{ o.score }}"><span class="opp">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
+          <td data-k="opp" data-sort="{{ o.score }}"><span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
           <td data-k="cat">{% if l.category %}<span class="cat">{{ l.category }}</span>{% else %}—{% endif %}</td>
           <td data-k="city">{{ l.city or l.address or '—' }}</td>
           <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td style="white-space:nowrap">
             <div class="dd">
-              <button class="dd-btn st-{{ l.email_status }}" onclick="ddToggle(this,{{ l.id }})">
+              <button class="dd-btn st-{{ l.email_status }}" onclick="ddToggle(this)">
                 <span>{{ LBL[l.email_status] }}</span>
                 <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
               </button>
@@ -181,13 +170,12 @@
           </td>
         </tr>
         <tr class="note-row" id="note-{{ l.id }}" style="display:none"><td colspan="9">
-          <textarea placeholder="Нотатка про дзвінок…" onblur="saveNote({{ l.id }},this)">{{ l.notes or '' }}</textarea>
-        </td></tr>
+          <textarea placeholder="Нотатка про дзвінок…" onblur="saveNote({{ l.id }},this)">{{ l.notes or '' }}</textarea></td></tr>
       {% else %}
         <tr><td colspan="9"><div class="empty">
           <h3>Список поки порожній</h3>
           <p><b>Лід</b> — потенційний клієнт: бізнес, якому можна продати сайт, рекламу чи AI-автоматизацію.</p>
-          <p>Ліворуч обери <b>країну → область → місто</b> і тип, натисни <b>«Зібрати клієнтів»</b> — знайду заклади та їхні контакти. Тоді тисни <b>«Без сайту»</b> — покажу найкращі цілі.</p>
+          <p>Ліворуч обери <b>область</b> і тип, натисни <b>«Зібрати клієнтів»</b>. Тоді тисни <b>«Без сайту»</b> — покажу найкращі цілі.</p>
         </div></td></tr>
       {% endfor %}
       </tbody>
@@ -196,37 +184,55 @@
   </div>
 </div>
 
+<div class="jobwrap" id="jobs"></div>
+
 <script>
 const GEO = {{ geo|tojson }};
-const cS=document.getElementById('country'),rS=document.getElementById('region'),
-      cB=document.getElementById('cities'),cH=document.getElementById('cityHint');
-function fillR(){const c=cS.value;rS.innerHTML=Object.keys(GEO[c].regions).map(r=>`<option>${r}</option>`).join('');fillC();}
-function fillC(){const l=(GEO[cS.value].regions[rS.value]||[]);
-  cB.innerHTML=`<label class="all"><input type="checkbox" onclick="allC(this)"> усі міста регіону</label>`+
-    l.map(c=>`<label><input type="checkbox" name="cities" value="${c}"> ${c}</label>`).join('');cH.textContent=`(${l.length})`;}
-function allC(e){cB.querySelectorAll('input[name=cities]').forEach(i=>i.checked=e.checked);}
-cS.onchange=fillR;rS.onchange=fillC;fillR();
+const CATS = {{ category_labels|tojson }};
 
-/* custom status dropdown */
+/* ---- custom form dropdowns ---- */
+let openCsel=null;
+function makeSelect(mountId, hiddenId, opts, current, onChange){
+  const mount=document.getElementById(mountId), hidden=document.getElementById(hiddenId);
+  const cur=opts.find(o=>o.v===current)||opts[0];
+  hidden.value=cur.v;
+  mount.innerHTML=`<div class="csel"><button class="csel-btn" type="button"><span class="cv">${cur.l}</span>
+    <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="csel-menu">${opts.map(o=>`<button type="button" class="csel-opt ${o.v===cur.v?'sel':''}" data-v="${o.v}">${o.l}</button>`).join('')}</div></div>`;
+  const csel=mount.firstElementChild, btn=csel.querySelector('.csel-btn'), menu=csel.querySelector('.csel-menu');
+  btn.onclick=e=>{e.stopPropagation(); if(openCsel&&openCsel!==menu)openCsel.classList.remove('open');
+    menu.classList.toggle('open'); openCsel=menu.classList.contains('open')?menu:null;};
+  menu.querySelectorAll('.csel-opt').forEach(o=>o.onclick=()=>{ hidden.value=o.dataset.v;
+    btn.querySelector('.cv').textContent=o.textContent; menu.querySelectorAll('.csel-opt').forEach(x=>x.classList.remove('sel'));
+    o.classList.add('sel'); menu.classList.remove('open'); openCsel=null; if(onChange)onChange(o.dataset.v); });
+}
+document.addEventListener('click',()=>{ if(openCsel){openCsel.classList.remove('open');openCsel=null;} });
+
+function buildRegion(country){
+  const regs=GEO[country].regions.map(r=>({v:r,l:r}));
+  makeSelect('dd-region','f-region',regs,regs[0].v,null);
+}
+const countryOpts=Object.keys(GEO).map(c=>({v:c,l:(c==='Україна'?'🇺🇦 ':'')+c}));
+makeSelect('dd-country','f-country',Object.keys(GEO).map(c=>({v:c,l:c})),'Україна',buildRegion);
+buildRegion('Україна');
+makeSelect('dd-category','f-category',Object.entries(CATS).map(([v,l])=>({v,l})),'cafe',null);
+
+/* ---- row status dropdown ---- */
 let openMenu=null;
-function ddToggle(btn){ const m=btn.nextElementSibling;
-  if(openMenu&&openMenu!==m){openMenu.classList.remove('open');}
+function ddToggle(btn){const m=btn.nextElementSibling;
+  if(openMenu&&openMenu!==m)openMenu.classList.remove('open');
   if(m.classList.contains('open')){m.classList.remove('open');openMenu=null;return;}
-  const r=btn.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=r.left+'px';
-  m.classList.add('open');openMenu=m; }
-function ddPick(id,st,opt){ const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn');
-  btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=({new:'новий',target:'в роботі',called:'подзвонив',client:'клієнт',no:'відмова'})[st];
-  const tr=dd.closest('tr'); tr.className='st-'+st; tr.dataset.id&&0;
-  dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
-  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st}); }
-document.addEventListener('click',e=>{ if(openMenu&&!e.target.closest('.dd')){openMenu.classList.remove('open');openMenu=null;} });
-window.addEventListener('scroll',()=>{ if(openMenu){openMenu.classList.remove('open');openMenu=null;} },true);
+  const r=btn.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=r.left+'px';m.classList.add('open');openMenu=m;}
+function ddPick(id,st,opt){const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn');
+  btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=({new:'новий',marked:'позначення',success:'успішні',rejected:'відмова'})[st];
+  dd.closest('tr').className='st-'+st; dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
+  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st});}
+document.addEventListener('click',e=>{if(openMenu&&!e.target.closest('.dd')){openMenu.classList.remove('open');openMenu=null;}});
+window.addEventListener('scroll',()=>{if(openMenu){openMenu.classList.remove('open');openMenu=null;}},true);
 
-function toggleNote(id){ const r=document.getElementById('note-'+id); r.style.display=r.style.display==='none'?'table-row':'none';
-  if(r.style.display!=='none')r.querySelector('textarea').focus(); }
-function saveNote(id,ta){ const nb=document.querySelector(`button.notebtn[onclick="toggleNote(${id})"]`);
-  if(nb)nb.classList.toggle('has',ta.value.trim().length>0);
-  fetch(`/lead/${id}/note`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'note='+encodeURIComponent(ta.value)}); }
+function toggleNote(id){const r=document.getElementById('note-'+id);r.style.display=r.style.display==='none'?'table-row':'none';if(r.style.display!=='none')r.querySelector('textarea').focus();}
+function saveNote(id,ta){const nb=document.querySelector(`button.notebtn[onclick="toggleNote(${id})"]`);if(nb)nb.classList.toggle('has',ta.value.trim().length>0);
+  fetch(`/lead/${id}/note`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'note='+encodeURIComponent(ta.value)});}
 function cp(t,b){navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);});}
 
 function sel(){return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value);}
@@ -246,9 +252,11 @@ function sortBy(th){const k=th.dataset.k;if(!k)return;const tb=document.querySel
 document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>sortBy(th));
 
 async function pollJobs(){try{const jobs=await (await fetch('/jobs.json')).json();const box=document.getElementById('jobs');
-  if(box)box.innerHTML=jobs.map(j=>{const t=j.state==='running'?`збираю, знайдено ${j.found}`:j.state==='done'?`готово: +${j.added} нових`:`помилка: ${j.error}`;
-    return `<div class="job ${j.state}">${j.label} — ${t}</div>`;}).join('');
-  const run=jobs.some(j=>j.state==='running');if(run){window._had=true;setTimeout(pollJobs,2000);}else if(window._had){window._had=false;location.reload();}
+  if(box)box.innerHTML=jobs.map(j=>{
+    if(j.state==='running')return `<div class="job running"><span class="spin"></span>Збираю «${j.label}» — знайдено ${j.found}…</div>`;
+    if(j.state==='done')return `<div class="job done">✓ «${j.label}» — додано ${j.added} нових бізнесів</div>`;
+    return `<div class="job error">✕ «${j.label}» — помилка: ${j.error}</div>`;}).join('');
+  const run=jobs.some(j=>j.state==='running');if(run){window._had=true;setTimeout(pollJobs,1500);}else if(window._had){window._had=false;location.reload();}
   }catch(e){setTimeout(pollJobs,4000);}}
 pollJobs();
 </script>

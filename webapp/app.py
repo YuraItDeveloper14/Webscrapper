@@ -30,7 +30,7 @@ from leadgen.scrape_osm import scrape_osm, CATEGORY_FILTERS
 from leadgen.extract_emails import enrich_emails
 from leadgen.geo import (COUNTRIES as GEO_COUNTRIES,
                          geocode_query as geo_geocode_query,
-                         region_of as geo_region_of)
+                         CATEGORY_LABELS)
 from leadgen.score import opportunity
 
 app = Flask(__name__)
@@ -136,7 +136,7 @@ def index():
         countries_filter=db.distinct_col("country"),
         regions_filter=db.distinct_col("region"),
         statuses=db.VALID_STATUSES,
-        osm_categories=sorted(CATEGORY_FILTERS.keys()),
+        category_labels=CATEGORY_LABELS,
         geo=GEO_COUNTRIES,
         jobs=sorted(JOBS.values(), key=lambda j: -j["id"])[:5],
     )
@@ -154,27 +154,25 @@ def _not_found(_e):
     return redirect(url_for("index"))
 
 
-# How many businesses to pull per city — fixed so the user never picks a limit.
-SCRAPE_MAX_PER_CITY = 250
+# How many businesses to pull per region — fixed so the user never picks a limit.
+SCRAPE_MAX_PER_REGION = 500
 
 
 @app.route("/scrape", methods=["POST"])
 def scrape():
     country = request.form.get("country", "").strip()
+    region = request.form.get("region", "").strip()
     category = request.form.get("category", "cafe").strip()
-    cities = [c for c in request.form.getlist("cities") if c]
-    if not cities:
-        flash("Обери хоча б одне місто зі списку ліворуч.", "error")
+    if not region:
+        flash("Обери область.", "error")
         return redirect(url_for("index"))
-    targets = [{
-        "geocode_q": geo_geocode_query(country, c) if country else c,
-        "country": country, "region": geo_region_of(country, c), "city": c,
-    } for c in cities]
-    label = f"{category} · {', '.join(cities[:4])}" + (" …" if len(cities) > 4 else "")
+    target = {"geocode_q": geo_geocode_query(country, region),
+              "country": country, "region": region, "city": ""}
+    label = f"{CATEGORY_LABELS.get(category, category)} · {region}"
     jid = _new_job(label)
-    threading.Thread(target=_run_scrape_job, args=(jid, targets, category, SCRAPE_MAX_PER_CITY),
+    threading.Thread(target=_run_scrape_job, args=(jid, [target], category, SCRAPE_MAX_PER_REGION),
                      daemon=True).start()
-    flash(f"Збираю «{category}» у {len(cities)} містах. За хвилину список оновиться сам.", "ok")
+    flash(f"Збираю «{CATEGORY_LABELS.get(category, category)}» по всій області {region}. За хвилину зʼявиться внизу.", "ok")
     return redirect(url_for("index"))
 
 

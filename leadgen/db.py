@@ -53,7 +53,7 @@ LEADS = Table(
     Index("idx_leads_country", "country"),
 )
 
-VALID_STATUSES = ("new", "target", "called", "client", "no")
+VALID_STATUSES = ("new", "marked", "success", "rejected")
 _LEAD_COLS = ("name", "website", "email", "phone", "address", "category", "rating",
               "query", "maps_url", "lat", "lon", "country", "region", "city",
               "site_ok", "mobile")
@@ -70,11 +70,20 @@ def _migrate_sqlite(conn) -> None:
             conn.execute(text(f"ALTER TABLE leads ADD COLUMN {col} {decl}"))
 
 
+# Old status value -> new one (statuses were simplified to 3 + default).
+_STATUS_REMAP = {"target": "marked", "client": "success", "no": "rejected",
+                 "called": "new", "contacted": "new", "replied": "success",
+                 "bounced": "rejected", "skip": "new"}
+
+
 def init_db() -> None:
     _meta.create_all(ENGINE)
-    if IS_SQLITE:
-        with ENGINE.begin() as conn:
+    with ENGINE.begin() as conn:
+        if IS_SQLITE:
             _migrate_sqlite(conn)
+        for old, new in _STATUS_REMAP.items():
+            conn.execute(update(LEADS).where(LEADS.c.email_status == old)
+                         .values(email_status=new))
 
 
 init_db()

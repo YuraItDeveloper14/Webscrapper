@@ -1,90 +1,66 @@
-"""Curated geography for the collection UI: Country -> Region -> Cities.
+"""Geography for collection: Country -> Region (whole admin area, scraped at once).
 
-A whole-country Overpass query is not feasible (it times out and returns far
-too much), so collection is always scoped to cities. This dataset lets the user
-pick a country and region, then one or many cities; each city becomes its own
-scrape job. City names are geocoded as "<city>, <suffix>" so Nominatim resolves
-the right place across countries.
+The user picks a country and a region (oblast / voivodeship / state) and we scrape
+the WHOLE region's bounding box — no per-city picking. Region names are chosen so
+Nominatim resolves them to the right admin area.
 """
 from __future__ import annotations
 
 COUNTRIES: dict[str, dict] = {
-    "Україна": {
-        "suffix": "Ukraine", "flag": "\U0001F1FA\U0001F1E6",
-        "regions": {
-            "м. Київ": ["Київ"],
-            "Львівська": ["Львів", "Дрогобич", "Червоноград"],
-            "Київська": ["Біла Церква", "Бровари", "Ірпінь"],
-            "Харківська": ["Харків"],
-            "Одеська": ["Одеса", "Ізмаїл"],
-            "Дніпропетровська": ["Дніпро", "Кривий Ріг", "Кам'янське"],
-            "Запорізька": ["Запоріжжя"],
-            "Вінницька": ["Вінниця"],
-            "Полтавська": ["Полтава", "Кременчук"],
-            "Івано-Франківська": ["Івано-Франківськ"],
-            "Тернопільська": ["Тернопіль"],
-            "Волинська": ["Луцьк"],
-            "Рівненська": ["Рівне"],
-            "Хмельницька": ["Хмельницький"],
-            "Черкаська": ["Черкаси"],
-            "Чернівецька": ["Чернівці"],
-            "Чернігівська": ["Чернігів"],
-            "Житомирська": ["Житомир"],
-            "Сумська": ["Суми"],
-            "Миколаївська": ["Миколаїв"],
-            "Херсонська": ["Херсон"],
-            "Кіровоградська": ["Кропивницький"],
-            "Закарпатська": ["Ужгород", "Мукачево"],
-        },
-    },
-    "Польща": {
-        "suffix": "Poland", "flag": "\U0001F1F5\U0001F1F1",
-        "regions": {"Головні міста": [
-            "Warszawa", "Kraków", "Wrocław", "Poznań", "Gdańsk",
-            "Łódź", "Katowice", "Lublin", "Szczecin", "Rzeszów"]},
-    },
-    "Велика Британія": {
-        "suffix": "United Kingdom", "flag": "\U0001F1EC\U0001F1E7",
-        "regions": {"Головні міста": [
-            "London", "Manchester", "Birmingham", "Leeds", "Liverpool",
-            "Glasgow", "Edinburgh", "Bristol", "Cardiff"]},
-    },
-    "Німеччина": {
-        "suffix": "Germany", "flag": "\U0001F1E9\U0001F1EA",
-        "regions": {"Головні міста": [
-            "Berlin", "München", "Hamburg", "Köln", "Frankfurt",
-            "Stuttgart", "Düsseldorf", "Leipzig"]},
-    },
-    "Чехія": {
-        "suffix": "Czechia", "flag": "\U0001F1E8\U0001F1FF",
-        "regions": {"Головні міста": ["Praha", "Brno", "Ostrava", "Plzeň"]},
-    },
-    "США": {
-        "suffix": "USA", "flag": "\U0001F1FA\U0001F1F8",
-        "regions": {
-            "California": ["Los Angeles", "San Francisco", "San Diego", "San Jose"],
-            "New York": ["New York", "Buffalo"],
-            "Texas": ["Houston", "Dallas", "Austin", "San Antonio"],
-            "Florida": ["Miami", "Orlando", "Tampa"],
-            "Illinois": ["Chicago"],
-            "Washington": ["Seattle"],
-        },
-    },
+    "Україна": {"suffix": "Ukraine", "kind": "oblast", "regions": [
+        "м. Київ", "Київська", "Львівська", "Харківська", "Одеська",
+        "Дніпропетровська", "Запорізька", "Вінницька", "Полтавська",
+        "Івано-Франківська", "Тернопільська", "Волинська", "Рівненська",
+        "Хмельницька", "Черкаська", "Чернівецька", "Чернігівська", "Житомирська",
+        "Сумська", "Миколаївська", "Херсонська", "Кіровоградська", "Закарпатська",
+    ]},
+    "Польща": {"suffix": "Poland", "kind": "plain", "regions": [
+        "Mazowieckie", "Małopolskie", "Dolnośląskie", "Wielkopolskie",
+        "Pomorskie", "Śląskie", "Łódzkie", "Lubelskie", "Podkarpackie",
+        "Zachodniopomorskie",
+    ]},
+    "Велика Британія": {"suffix": "United Kingdom", "kind": "plain", "regions": [
+        "Greater London", "Greater Manchester", "West Midlands", "West Yorkshire",
+        "Merseyside", "Scotland", "Wales",
+    ]},
+    "Німеччина": {"suffix": "Germany", "kind": "plain", "regions": [
+        "Berlin", "Bayern", "Hamburg", "Nordrhein-Westfalen", "Hessen",
+        "Baden-Württemberg", "Sachsen",
+    ]},
+    "Чехія": {"suffix": "Czechia", "kind": "plain", "regions": [
+        "Praha", "Jihomoravský kraj", "Moravskoslezský kraj", "Plzeňský kraj",
+    ]},
+    "США": {"suffix": "USA", "kind": "plain", "regions": [
+        "California", "New York", "Texas", "Florida", "Illinois", "Washington",
+    ]},
+}
+
+# OSM business category -> Ukrainian label shown in the UI.
+CATEGORY_LABELS: dict[str, str] = {
+    "cafe": "Кав'ярні",
+    "restaurant": "Ресторани",
+    "bakery": "Пекарні",
+    "bar": "Бари та паби",
+    "hotel": "Готелі",
+    "dentist": "Стоматології",
+    "doctor": "Лікарі та клініки",
+    "pharmacy": "Аптеки",
+    "beauty": "Салони краси",
+    "hairdresser": "Перукарні",
+    "gym": "Спортзали та фітнес",
+    "car_repair": "Автосервіси",
+    "lawyer": "Юристи",
+    "real_estate": "Нерухомість",
+    "shop": "Магазини",
 }
 
 
-def country_names() -> list[str]:
-    return list(COUNTRIES.keys())
-
-
-def geocode_query(country: str, city: str) -> str:
-    """Full Nominatim query string, e.g. 'Ternopil, Ukraine'."""
-    suffix = COUNTRIES.get(country, {}).get("suffix", "")
-    return f"{city}, {suffix}" if suffix else city
-
-
-def region_of(country: str, city: str) -> str:
-    for region, cities in COUNTRIES.get(country, {}).get("regions", {}).items():
-        if city in cities:
-            return region
-    return ""
+def geocode_query(country: str, region: str) -> str:
+    """Nominatim query for a whole region, e.g. 'Львівська область, Ukraine'."""
+    meta = COUNTRIES.get(country, {})
+    suffix = meta.get("suffix", "")
+    if meta.get("kind") == "oblast":
+        if region.startswith("м. "):
+            return f"{region[3:]}, {suffix}"
+        return f"{region} область, {suffix}"
+    return f"{region}, {suffix}" if suffix else region
