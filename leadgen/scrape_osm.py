@@ -164,7 +164,9 @@ async def scrape_osm(geocode_q: str, category: str, max_results: int = 200,
         elements = await _overpass(query, client)
     leads, seen = [], set()
     for el in elements:
-        lead = _to_lead(el, f"{category} {geo['city']}", geo)
+        # `query` stores the chosen category key so a search can show exactly
+        # its own results later (country + region + category)
+        lead = _to_lead(el, category, geo)
         if not lead["name"] or lead["maps_url"] in seen:
             continue
         seen.add(lead["maps_url"])

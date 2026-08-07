@@ -114,18 +114,21 @@ app.jinja_env.globals["category_label"] = category_label
 
 def _query_and_filter(args, limit=1000):
     """Shared lead query + opportunity filter for the register and the map."""
+    status = args.get("status", "")
     filters = {
         "search": args.get("search", "").strip(),
         "category": args.get("category", ""),
-        "status": args.get("status", ""),
-        "has_email": args.get("has_email", ""),
-        "country": args.get("country", ""),
-        "region": args.get("region", ""),
+        "status": status,
+        "has_email": "",
+        # Results are scoped to the search that produced them (c/r/cat), so the
+        # stored leads act as a cache and never leak into another search.
+        # The status lists are the user's own marks, so they span every search.
+        "country": "" if status else args.get("c", ""),
+        "region": "" if status else args.get("r", ""),
+        "cat_key": "" if status else args.get("cat", ""),
     }
     opp = args.get("opp", "")  # "" | nosite | weak
-    # the working list hides leads already handled and ones with no way to reach
-    # them; ?raw=1 or a status chip shows everything
-    working = not (args.get("status") or args.get("raw"))
+    working = not status       # hide handled leads and ones with no contact
     leads = db.query_leads(limit=limit, opp=opp, contactable=working,
                            hide_done=working, **filters)
     return leads, filters, opp, working
@@ -136,7 +139,7 @@ def _query_and_filter(args, limit=1000):
 def index():
     # "blank" = nothing chosen yet -> keep the results panel empty (limit 0 = no rows)
     blank = not any(request.args.get(k, "").strip()
-                    for k in ("search", "status", "category", "region", "opp", "all"))
+                    for k in ("search", "status", "category", "opp", "all", "c", "r", "cat"))
     leads, filters, opp, working = _query_and_filter(
         request.args, limit=0 if blank else PAGE_LIMIT)
     total = 0 if blank else db.count_leads(opp=opp, contactable=working,
@@ -190,6 +193,9 @@ def scrape():
     if any(j["state"] == "running" for j in JOBS.values()):
         flash("Збір уже триває — зачекайте, поки він завершиться.", "error")
         return redirect(url_for("index", all=1))
+    # already scraped this exact search before — reuse it instead of hitting OSM again
+    if db.count_leads(country=country, region=region, cat_key=category):
+        return redirect(url_for("index", all=1, c=country, r=region, cat=category))
     target = {"geocode_q": geo_geocode_query(country, region),
               "country": country, "region": region, "city": ""}
     label = f"{CATEGORY_LABELS.get(category, category)} · {region}"
