@@ -176,9 +176,9 @@ SCRAPE_MAX_PER_REGION = 500
 def scrape():
     country = request.form.get("country", "").strip()
     region = request.form.get("region", "").strip()
-    category = request.form.get("category", "cafe").strip()
-    if not region:
-        flash("Обери область.", "error")
+    category = request.form.get("category", "").strip()
+    if not (country and region and category):
+        flash("Оберіть країну, область і тип бізнесу.", "error")
         return redirect(url_for("index"))
     target = {"geocode_q": geo_geocode_query(country, region),
               "country": country, "region": region, "city": ""}

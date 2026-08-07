@@ -30,6 +30,11 @@
   .qs input{width:100%;padding:9px 32px 9px 13px;border-radius:999px;font-size:13.5px}
   .qs-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);font-size:13px;font-weight:700}
   .reg-top > .btn{margin-left:auto}
+  .collapse-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;
+    border:1px solid var(--border-strong);border-radius:9px;background:var(--panel);color:var(--ink-soft);
+    cursor:pointer;font-size:15px;flex:0 0 auto}
+  .collapse-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--sunk2)}
+  .csel-btn.ph .cv{color:var(--ink-faint);font-weight:500}
   .bulkbar{display:none;align-items:center;gap:10px;margin:14px 19px 0;padding:11px 14px;
     background:var(--sunk2);border:1px solid var(--border-strong);border-radius:11px;font-size:13.5px}
   .bulkbar.show{display:flex}
@@ -157,6 +162,7 @@
         {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}">✕</a>{% endif %}
       </form>
       <a class="btn ghost sm" href="{{ url_for('export', **filters) }}">Експорт у Excel</a>
+      <button class="collapse-btn" id="collapseBtn" onclick="toggleList()" title="Згорнути список">✕</button>
     </div>
     <div class="bulkbar" id="bulkbar"><b id="bulkCount">0</b> обрано ·
       <button class="btn sm" type="button" onclick="bulk('marked')">Позначити</button>
@@ -194,13 +200,9 @@
                 {% for s in statuses %}<button class="dd-opt st-{{ s }}" onclick="ddPick({{ l.id }},'{{ s }}',this)"><span class="dot"></span>{{ LBL[s] }}</button>{% endfor %}
               </div>
             </div>
-            <button class="notebtn {{ 'has' if l.notes }}" title="Нотатка" onclick="toggleNote({{ l.id }})">✎</button>
-            <button class="actbtn" title="Скопіювати шаблон повідомлення" onclick="copyTemplate(this,{{ l.name|tojson }})">✉</button>
             <button class="star {{ 'on' if l.email_status=='marked' }}" title="Позначити" onclick="toggleStar({{ l.id }},this)">{{ '★' if l.email_status=='marked' else '☆' }}</button>
           </td>
         </tr>
-        <tr class="note-row" id="note-{{ l.id }}" style="display:none"><td colspan="9">
-          <textarea placeholder="Нотатка про дзвінок…" onblur="saveNote({{ l.id }},this)">{{ l.notes or '' }}</textarea></td></tr>
       {% else %}
         <tr><td colspan="9"><div class="empty">
           <h3>Список поки порожній</h3>
@@ -220,30 +222,35 @@ const CATS = {{ category_labels|tojson }};
 
 /* ---- custom form dropdowns ---- */
 let openCsel=null;
-function makeSelect(mountId, hiddenId, opts, current, onChange){
+function makeSelect(mountId, hiddenId, opts, current, onChange, ph){
   const mount=document.getElementById(mountId), hidden=document.getElementById(hiddenId);
-  const cur=opts.find(o=>o.v===current)||opts[0];
-  hidden.value=cur.v;
-  mount.innerHTML=`<div class="csel"><button class="csel-btn" type="button"><span class="cv">${cur.l}</span>
+  const cur=opts.find(o=>o.v===current);
+  hidden.value=cur?cur.v:'';
+  const label=cur?cur.l:(ph||'—'), phClass=cur?'':'ph';
+  mount.innerHTML=`<div class="csel"><button class="csel-btn ${phClass}" type="button"><span class="cv">${label}</span>
     <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
-    <div class="csel-menu">${opts.map(o=>`<button type="button" class="csel-opt ${o.v===cur.v?'sel':''}" data-v="${o.v}">${o.l}</button>`).join('')}</div></div>`;
+    <div class="csel-menu">${opts.map(o=>`<button type="button" class="csel-opt ${o.v===hidden.value?'sel':''}" data-v="${o.v}">${o.l}</button>`).join('')}</div></div>`;
   const csel=mount.firstElementChild, btn=csel.querySelector('.csel-btn'), menu=csel.querySelector('.csel-menu');
   btn.onclick=e=>{e.stopPropagation(); if(openCsel&&openCsel!==menu)openCsel.classList.remove('open');
     menu.classList.toggle('open'); openCsel=menu.classList.contains('open')?menu:null;};
-  menu.querySelectorAll('.csel-opt').forEach(o=>o.onclick=()=>{ hidden.value=o.dataset.v;
+  menu.querySelectorAll('.csel-opt').forEach(o=>o.onclick=()=>{ hidden.value=o.dataset.v; btn.classList.remove('ph');
     btn.querySelector('.cv').textContent=o.textContent; menu.querySelectorAll('.csel-opt').forEach(x=>x.classList.remove('sel'));
     o.classList.add('sel'); menu.classList.remove('open'); openCsel=null; if(onChange)onChange(o.dataset.v); });
 }
 document.addEventListener('click',()=>{ if(openCsel){openCsel.classList.remove('open');openCsel=null;} });
 
 function buildRegion(country){
-  const regs=GEO[country].regions.map(r=>({v:r,l:r}));
-  makeSelect('dd-region','f-region',regs,regs[0].v,null);
+  makeSelect('dd-region','f-region',GEO[country].regions.map(r=>({v:r,l:r})),null,null,'Оберіть область');
 }
-const countryOpts=Object.keys(GEO).map(c=>({v:c,l:(c==='Україна'?'🇺🇦 ':'')+c}));
-makeSelect('dd-country','f-country',Object.keys(GEO).map(c=>({v:c,l:c})),'Україна',buildRegion);
-buildRegion('Україна');
-makeSelect('dd-category','f-category',Object.entries(CATS).map(([v,l])=>({v,l})),'cafe',null);
+// empty fields with placeholders on every load
+makeSelect('dd-country','f-country',Object.keys(GEO).map(c=>({v:c,l:c})),null,buildRegion,'Оберіть країну');
+makeSelect('dd-region','f-region',[],null,null,'Спершу оберіть країну');
+makeSelect('dd-category','f-category',Object.entries(CATS).map(([v,l])=>({v,l})),null,null,'Оберіть тип бізнесу');
+
+function toggleList(){ const s=document.querySelector('.scroll'), ch=document.querySelector('.chips'),
+    b=document.getElementById('collapseBtn'); const hide=s.style.display!=='none';
+  s.style.display=hide?'none':''; if(ch)ch.style.display=hide?'none':'';
+  b.textContent=hide?'▾':'✕'; b.title=hide?'Розгорнути список':'Згорнути список'; }
 
 /* ---- row status dropdown ---- */
 let openMenu=null;
