@@ -98,8 +98,13 @@ def init_db() -> None:
         conn.execute(update(LEADS).where(
             or_(LEADS.c.city == LEADS.c.region,
                 LEADS.c.city == LEADS.c.region + " область")).values(city=None))
-        conn.execute(update(LEADS).where(LEADS.c.region.is_not(None)).values(
+        conn.execute(update(LEADS).where(and_(
+            LEADS.c.region.is_not(None),
+            LEADS.c.address.like("% область%"))).values(
             address=func.trim(func.replace(LEADS.c.address, LEADS.c.region + " область", ""))))
+        # …and where the address ended up being just the region ("Illinois")
+        conn.execute(update(LEADS).where(
+            LEADS.c.address == LEADS.c.region).values(address=None))
 
 
 init_db()
