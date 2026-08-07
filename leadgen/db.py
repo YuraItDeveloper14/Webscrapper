@@ -54,6 +54,9 @@ LEADS = Table(
 )
 
 VALID_STATUSES = ("new", "marked", "success", "rejected")
+# ~110 m: close enough to be the same business mapped twice, far enough apart
+# that two branches of a chain stay separate rows.
+COORD_EPS = 0.001
 _LEAD_COLS = ("name", "website", "email", "phone", "address", "category", "rating",
               "query", "maps_url", "lat", "lon", "country", "region", "city",
               "site_ok", "mobile", "social")
@@ -89,6 +92,10 @@ def init_db() -> None:
         for old, new in _STATUS_REMAP.items():
             conn.execute(update(LEADS).where(LEADS.c.email_status == old)
                          .values(email_status=new))
+        # early region scrapes stored the region name in `city` — clear those
+        conn.execute(update(LEADS).where(
+            or_(LEADS.c.city == LEADS.c.region,
+                LEADS.c.city == LEADS.c.region + " область")).values(city=None))
 
 
 init_db()
@@ -107,13 +114,21 @@ def upsert_lead(conn, lead: dict) -> bool:
     Returns True if a new row was inserted. Identity is `maps_url` when present,
     otherwise (name, address).
     """
-    # Identity: same OSM url, OR same business name in the same city (dedups the
-    # node+way duplicates OSM often has for one place).
+    # Identity: same OSM url, OR the same name at (almost) the same spot / same
+    # city — OSM often maps one business twice, as a node and as a building way.
     ident = [LEADS.c.maps_url == lead.get("maps_url")]
-    nm, city = (lead.get("name") or "").strip(), (lead.get("city") or "").strip()
+    nm = (lead.get("name") or "").strip()
+    city = (lead.get("city") or "").strip()
+    lat, lon = lead.get("lat"), lead.get("lon")
+    # exact name match on purpose: SQLite's lower() is ASCII-only and would miss
+    # Cyrillic, so case folding is done in Python by dedupe_existing() instead.
+    same_name = LEADS.c.name == nm
+    if nm and lat is not None and lon is not None:
+        ident.append(and_(same_name,
+                          LEADS.c.lat.between(lat - COORD_EPS, lat + COORD_EPS),
+                          LEADS.c.lon.between(lon - COORD_EPS, lon + COORD_EPS)))
     if nm and city:
-        ident.append(and_(func.lower(LEADS.c.name) == nm.lower(),
-                          func.lower(LEADS.c.city) == city.lower()))
+        ident.append(and_(same_name, LEADS.c.city == city))
     sel = select(LEADS.c.id, LEADS.c.email, LEADS.c.website).where(or_(*ident))
     row = conn.execute(sel).first()
     if row is None:
@@ -136,9 +151,8 @@ def set_coords(conn, lead_id: int, lat: float, lon: float) -> None:
     conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(lat=lat, lon=lon))
 
 
-def query_leads(search: str = "", category: str = "", status: str = "",
-                has_email: str = "", country: str = "", region: str = "",
-                limit: int = 1000) -> list[dict]:
+def _filter_conditions(search="", category="", status="", has_email="",
+                       country="", region="", opp=""):
     conds = []
     if search:
         like = f"%{search}%"
@@ -156,11 +170,42 @@ def query_leads(search: str = "", category: str = "", status: str = "",
         conds.append(and_(LEADS.c.email.is_not(None), LEADS.c.email != ""))
     elif has_email == "no":
         conds.append(or_(LEADS.c.email.is_(None), LEADS.c.email == ""))
+    if opp == "nosite":
+        conds.append(or_(LEADS.c.website.is_(None), LEADS.c.website == ""))
+    elif opp:  # weak / hot — anything missing or with a poor site
+        conds.append(_prospect_condition())
+    return conds
+
+
+# best sales targets first: no site at all, then a weak one, then the rest
+_TARGET_ORDER = (
+    case((or_(LEADS.c.website.is_(None), LEADS.c.website == ""), 0), else_=1),
+    case((LEADS.c.site_ok == 0, 0), else_=1),
+    case((or_(LEADS.c.email.is_(None), LEADS.c.email == ""), 1), else_=0),
+    LEADS.c.name,
+)
+
+
+def query_leads(search: str = "", category: str = "", status: str = "",
+                has_email: str = "", country: str = "", region: str = "",
+                opp: str = "", limit: int = 500) -> list[dict]:
+    conds = _filter_conditions(search, category, status, has_email, country, region, opp)
     stmt = (select(LEADS).where(and_(*conds)) if conds else select(LEADS))
-    stmt = stmt.order_by(case((or_(LEADS.c.email.is_(None), LEADS.c.email == ""), 1),
-                              else_=0), LEADS.c.name).limit(limit)
+    stmt = stmt.order_by(*_TARGET_ORDER).limit(limit)
     with connect() as conn:
         return [dict(r) for r in conn.execute(stmt).mappings().all()]
+
+
+def count_leads(search: str = "", category: str = "", status: str = "",
+                has_email: str = "", country: str = "", region: str = "",
+                opp: str = "") -> int:
+    """How many leads match — so the UI can say 'showing 500 of 1143'."""
+    conds = _filter_conditions(search, category, status, has_email, country, region, opp)
+    stmt = select(func.count()).select_from(LEADS)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    with connect() as conn:
+        return conn.execute(stmt).scalar_one()
 
 
 def set_status(lead_id: int, status: str) -> bool:
@@ -194,15 +239,21 @@ def dedupe_existing() -> int:
     from sqlalchemy import delete
     with connect() as conn:
         rows = conn.execute(select(
-            LEADS.c.id, LEADS.c.name, LEADS.c.city, LEADS.c.email,
-            LEADS.c.website, LEADS.c.email_status)).mappings().all()
+            LEADS.c.id, LEADS.c.name, LEADS.c.city, LEADS.c.email, LEADS.c.lat,
+            LEADS.c.lon, LEADS.c.website, LEADS.c.phone, LEADS.c.social,
+            LEADS.c.email_status)).mappings().all()
         groups: dict[tuple, list] = {}
         for r in rows:
             nm = (r["name"] or "").strip().lower()
-            city = (r["city"] or "").strip().lower()
-            if not nm or not city:
-                continue  # can't safely dedup without both
-            groups.setdefault((nm, city), []).append(r)
+            if not nm:
+                continue
+            if r["lat"] is not None and r["lon"] is not None:
+                key = (nm, round(r["lat"], 3), round(r["lon"], 3))  # same name, same spot
+            elif (r["city"] or "").strip():
+                key = (nm, r["city"].strip().lower())
+            else:
+                continue  # not enough to tell duplicates apart safely
+            groups.setdefault(key, []).append(r)
 
         def score(r):
             return (0 if r["email_status"] in ("new", None) else 1,
@@ -213,6 +264,16 @@ def dedupe_existing() -> int:
             if len(members) < 2:
                 continue
             keep = max(members, key=score)
+            # carry over any contact the kept row is missing before dropping the rest
+            fill = {}
+            for field in ("email", "website", "phone", "social"):
+                if not keep.get(field):
+                    for m in members:
+                        if m["id"] != keep["id"] and m.get(field):
+                            fill[field] = m[field]
+                            break
+            if fill:
+                conn.execute(update(LEADS).where(LEADS.c.id == keep["id"]).values(**fill))
             remove += [m["id"] for m in members if m["id"] != keep["id"]]
         if remove:
             conn.execute(delete(LEADS).where(LEADS.c.id.in_(remove)))

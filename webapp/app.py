@@ -78,8 +78,13 @@ def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: i
         JOBS[jid]["with_email"] = sum(1 for l in all_leads if l.get("email"))
         with db.connect() as conn:
             for lead in all_leads:
-                if db.upsert_lead(conn, lead):
-                    total_added += 1
+                # savepoint per row: one bad record must not discard the whole scrape
+                try:
+                    with conn.begin_nested():
+                        if db.upsert_lead(conn, lead):
+                            total_added += 1
+                except Exception:
+                    continue
         db.dedupe_existing()  # clean any node+way duplicates from this batch
         JOBS[jid]["added"] = total_added
 
@@ -116,19 +121,8 @@ def _query_and_filter(args, limit=1000):
         "country": args.get("country", ""),
         "region": args.get("region", ""),
     }
-    opp = args.get("opp", "")  # "" | nosite | weak | hot
-    leads = db.query_leads(limit=limit, **filters)
-    if opp:
-        def keep(l):
-            o = opportunity(l)
-            if opp == "nosite":
-                return not (l.get("website") or "").strip()
-            if opp == "weak":
-                return o["tier"] in ("hot", "warm")
-            if opp == "hot":
-                return o["tier"] == "hot"
-            return True
-        leads = [l for l in leads if keep(l)]
+    opp = args.get("opp", "")  # "" | nosite | weak
+    leads = db.query_leads(limit=limit, opp=opp, **filters)
     return leads, filters, opp
 
 
@@ -138,17 +132,17 @@ def index():
     # "blank" = nothing chosen yet -> keep the results panel empty (limit 0 = no rows)
     blank = not any(request.args.get(k, "").strip()
                     for k in ("search", "status", "category", "region", "opp", "all"))
-    leads, filters, opp = _query_and_filter(request.args, limit=0 if blank else 1000)
-    # best sales targets first (no site / weak site)
+    leads, filters, opp = _query_and_filter(request.args, limit=0 if blank else PAGE_LIMIT)
+    total = 0 if blank else db.count_leads(opp=opp, **filters)
+    # refine the SQL ordering within the page: best sales targets first
     leads.sort(key=lambda l: -opportunity(l)["score"])
     return render_template(
         "leads.html",
         leads=leads,
+        total=total,
         filters=filters,
         opp=opp,
         blank=blank,
-        stats=db.stats(),
-        prospects=db.prospect_count(),
         status_counts=db.status_counts(),
         categories=db.distinct_categories(),
         countries_filter=db.distinct_col("country"),
@@ -174,6 +168,8 @@ def _not_found(_e):
 
 # How many businesses to pull per region — fixed so the user never picks a limit.
 SCRAPE_MAX_PER_REGION = 500
+# Rows rendered per page; the header still reports the true match count.
+PAGE_LIMIT = 500
 
 
 @app.route("/scrape", methods=["POST"])
@@ -184,13 +180,17 @@ def scrape():
     if not (country and region and category):
         flash("Оберіть країну, область і тип бізнесу.", "error")
         return redirect(url_for("index"))
+    if any(j["state"] == "running" for j in JOBS.values()):
+        flash("Збір уже триває — зачекайте, поки він завершиться.", "error")
+        return redirect(url_for("index", all=1))
     target = {"geocode_q": geo_geocode_query(country, region),
               "country": country, "region": region, "city": ""}
     label = f"{CATEGORY_LABELS.get(category, category)} · {region}"
     jid = _new_job(label)
     threading.Thread(target=_run_scrape_job, args=(jid, [target], category, SCRAPE_MAX_PER_REGION),
                      daemon=True).start()
-    return redirect(url_for("index", all=1))
+    # c/r/cat only repopulate the form after the redirect — they are not filters
+    return redirect(url_for("index", all=1, c=country, r=region, cat=category))
 
 
 @app.route("/lead/<int:lead_id>/status", methods=["POST"])
@@ -203,13 +203,6 @@ def lead_status(lead_id: int):
 def lead_note(lead_id: int):
     db.set_note(lead_id, request.form.get("note", ""))
     return ("", 204)
-
-
-@app.route("/admin/clear", methods=["POST"])
-def admin_clear():
-    n = db.clear_all()
-    flash(f"База очищена — видалено {n} записів.", "ok")
-    return redirect(url_for("index"))
 
 
 @app.route("/leads/bulk-status", methods=["POST"])
@@ -226,24 +219,21 @@ def jobs_json():
 
 @app.route("/export")
 def export():
-    leads = db.query_leads(
-        search=request.args.get("search", ""),
-        category=request.args.get("category", ""),
-        status=request.args.get("status", ""),
-        has_email=request.args.get("has_email", "yes"),
-        limit=100000,
-    )
+    # same query the page uses, so the file always matches what is on screen
+    leads, _f, _o = _query_and_filter(request.args, limit=100000)
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["name", "email", "phone", "website", "address", "category", "status"])
+    w.writerow(["name", "email", "phone", "website", "social", "city", "region",
+                "address", "category", "chance", "status"])
     seen = set()
     for l in leads:
         key = (l.get("email") or "").lower()
         if key and key in seen:
             continue
         seen.add(key)
-        w.writerow([l["name"], l["email"], l["phone"], l["website"],
-                    l["address"], l["category"], l["email_status"]])
+        w.writerow([l["name"], l["email"], l["phone"], l["website"], l.get("social") or "",
+                    l.get("city") or "", l.get("region") or "", l["address"], l["category"],
+                    opportunity(l)["reasons"][0], l["email_status"]])
     return Response(
         "﻿" + buf.getvalue(),
         mimetype="text/csv",

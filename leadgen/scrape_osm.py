@@ -120,7 +120,8 @@ def _to_lead(el: dict, query: str, geo: dict) -> dict:
     t = el.get("tags", {})
     street = _tag(t, "addr:street")
     house = _tag(t, "addr:housenumber")
-    city = _tag(t, "addr:city") or geo.get("city", "")
+    # the real town from OSM — never the region name, which would be misleading
+    city = _tag(t, "addr:city", "addr:town", "addr:village") or geo.get("city", "")
     address = " ".join(x for x in [f"{street} {house}".strip(), city] if x).strip(", ")
     osm_id = f"{el.get('type', 'node')}/{el.get('id')}"
     # coordinates: nodes carry lat/lon directly, ways/relations carry a center
@@ -140,7 +141,7 @@ def _to_lead(el: dict, query: str, geo: dict) -> dict:
         "lat": lat, "lon": lon,
         "country": geo.get("country", ""),
         "region": geo.get("region", ""),
-        "city": geo.get("city", ""),
+        "city": city,
         "social": social,
     }
 
@@ -156,7 +157,7 @@ async def scrape_osm(geocode_q: str, category: str, max_results: int = 200,
     if filters is None:
         # Allow a raw OSM filter like "amenity=cafe" to be passed straight through.
         filters = [category] if "=" in category else ["shop"]
-    geo = {"country": country, "region": region, "city": city or geocode_q.split(",")[0].strip()}
+    geo = {"country": country, "region": region, "city": city}
     async with httpx.AsyncClient() as client:
         bbox = await geocode_city(geocode_q, client)
         query = _build_query(filters, bbox, out_limit=max_results + 100)
