@@ -101,6 +101,8 @@
 
   /* full-panel loading state while a scrape runs (hides stale results) */
   .results{position:relative}
+  .results.is-blank{min-height:280px}
+  .blank-hint{padding:64px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px;font-weight:500}
   .loading{position:absolute;inset:0;z-index:30;background:rgba(255,255,255,.94);border-radius:16px;
     display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
   .loading.show{display:flex}
@@ -140,7 +142,7 @@
     </div>
   </div>
 
-  <div class="panel results">
+  <div class="panel results {{ 'is-blank' if blank }}">
     <div class="loading {{ 'show' if jobs and jobs[0].state=='running' }}" id="loading">
       <div class="load-spin"></div>
       <div class="load-txt">Збираю бізнеси…</div>
@@ -148,12 +150,15 @@
     </div>
     <div class="jobbar" id="jobs"></div>
     <div class="chips">
-      <a class="chip {{ 'on' if not opp and not filters.status and not filters.search }}" href="{{ url_for('index') }}">Знайдені</a>
+      <a class="chip {{ 'on' if not blank and not opp and not filters.status and not filters.search }}" href="{{ url_for('index', all=1) }}">Знайдені</a>
       <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak') }}">Без сайту</a>
       <a class="chip {{ 'on' if filters.status=='marked' }}" href="{{ url_for('index', status='marked') }}">Позначення</a>
       <a class="chip {{ 'on' if filters.status=='success' }}" href="{{ url_for('index', status='success') }}">Успішні</a>
       <a class="chip {{ 'on' if filters.status=='rejected' }}" href="{{ url_for('index', status='rejected') }}">Відмови</a>
     </div>
+    {% if blank %}
+    <div class="blank-hint">Оберіть область і тип бізнесу ліворуч — результати зʼявляться тут.</div>
+    {% else %}
     <div class="reg-top">
       <div class="reg-count">{{ leads|length }} у списку</div>
       <form method="get" action="{{ url_for('index') }}" class="qs">
@@ -213,6 +218,7 @@
       </tbody>
     </table>
     </div>
+    {% endif %}
   </div>
 </div>
 
@@ -307,7 +313,7 @@ async function pollJobs(){try{
   loading.classList.remove('show');
   const err=jobs.find(j=>j.state==='error');
   if(jb) jb.innerHTML = err ? `<div class="job error">✕ «${err.label}» — помилка: ${err.error}</div>` : '';
-  if(window._had){ window._had=false; location.reload(); return; }  // finished → show fresh results
+  if(window._had){ window._had=false; location.href='/?all=1'; return; }  // finished → show fresh results
   if(err) setTimeout(pollJobs,2000);                                // let the error age out
   }catch(e){setTimeout(pollJobs,4000);}}
 pollJobs();

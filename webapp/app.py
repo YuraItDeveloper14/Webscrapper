@@ -135,14 +135,18 @@ def _query_and_filter(args, limit=1000):
 # ---- routes ------------------------------------------------------------------
 @app.route("/")
 def index():
-    leads, filters, opp = _query_and_filter(request.args)
-    # best sales targets first (no site / weak site), unless the user chose a sort
+    # "blank" = nothing chosen yet -> keep the results panel empty (limit 0 = no rows)
+    blank = not any(request.args.get(k, "").strip()
+                    for k in ("search", "status", "category", "region", "opp", "all"))
+    leads, filters, opp = _query_and_filter(request.args, limit=0 if blank else 1000)
+    # best sales targets first (no site / weak site)
     leads.sort(key=lambda l: -opportunity(l)["score"])
     return render_template(
         "leads.html",
         leads=leads,
         filters=filters,
         opp=opp,
+        blank=blank,
         stats=db.stats(),
         prospects=db.prospect_count(),
         status_counts=db.status_counts(),
@@ -186,8 +190,7 @@ def scrape():
     jid = _new_job(label)
     threading.Thread(target=_run_scrape_job, args=(jid, [target], category, SCRAPE_MAX_PER_REGION),
                      daemon=True).start()
-    flash(f"Збираю «{CATEGORY_LABELS.get(category, category)}» по всій області {region}. За хвилину зʼявиться внизу.", "ok")
-    return redirect(url_for("index"))
+    return redirect(url_for("index", all=1))
 
 
 @app.route("/lead/<int:lead_id>/status", methods=["POST"])
