@@ -53,7 +53,10 @@
   .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap}
   .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;opacity:0;transition:.12s}
   tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
-  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;background:var(--sunk2);color:var(--ink-soft)}
+  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
+    background:var(--sunk2);color:var(--ink-soft);white-space:nowrap;text-decoration:none}
+  a.cat:hover{background:var(--ink);color:#fff}
+  .chip.typechip{background:var(--sunk2);border-color:var(--ink);color:var(--ink)}
   .maps{color:var(--ink-soft);font-weight:600;font-size:13px;border-bottom:1px solid var(--border-strong)}
   .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;
     background:var(--sunk2);color:var(--ink);border:1px solid var(--border-strong)}
@@ -158,11 +161,15 @@
     {# keep the form's country/region/type across views so it never resets mid-session #}
     {% set keep = {'c': request.args.get('c',''), 'r': request.args.get('r',''), 'cat': request.args.get('cat','')} %}
     <div class="chips">
-      <a class="chip {{ 'on' if not blank and not opp and not filters.status and not filters.search }}" href="{{ url_for('index', all=1, **keep) }}">Знайдені</a>
-      <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak', **keep) }}">Без сайту</a>
+      <a class="chip {{ 'on' if not blank and not opp and not filters.status and not request.args.get('raw') }}" href="{{ url_for('index', all=1, category=filters.category, **keep) }}">До обдзвону</a>
+      <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak', category=filters.category, **keep) }}">Без сайту</a>
       <a class="chip {{ 'on' if filters.status=='marked' }}" href="{{ url_for('index', status='marked', **keep) }}">Позначення</a>
       <a class="chip {{ 'on' if filters.status=='success' }}" href="{{ url_for('index', status='success', **keep) }}">Успішні</a>
       <a class="chip {{ 'on' if filters.status=='rejected' }}" href="{{ url_for('index', status='rejected', **keep) }}">Відмови</a>
+      <a class="chip {{ 'on' if request.args.get('raw') }}" href="{{ url_for('index', all=1, raw=1, category=filters.category, **keep) }}" title="Показати всіх, разом із тими, кого нема як набрати">Усі підряд</a>
+      {% if filters.category %}
+        <a class="chip on typechip" href="{{ url_for('index', all=1, raw=request.args.get('raw',''), status=filters.status, opp=opp, **keep) }}">{{ category_label(filters.category) }} ✕</a>
+      {% endif %}
     </div>
     {% if blank %}
     <div class="blank-hint">Оберіть область і тип бізнесу ліворуч — результати зʼявляться тут.</div>
@@ -171,6 +178,9 @@
       <div class="reg-count">{% if total > leads|length %}показано {{ leads|length }} з {{ total }}{% else %}{{ total }} у списку{% endif %}</div>
       <form method="get" action="{{ url_for('index') }}" class="qs">
         <input type="hidden" name="opp" value="{{ opp }}"><input type="hidden" name="status" value="{{ filters.status }}">
+        <input type="hidden" name="category" value="{{ filters.category }}">
+        <input type="hidden" name="raw" value="{{ request.args.get('raw','') }}">
+        {% for k, v in keep.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <input name="search" value="{{ filters.search }}" placeholder="пошук за назвою або email…">
         {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}">✕</a>{% endif %}
       </form>
@@ -200,7 +210,7 @@
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}"><span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
-          <td data-k="cat">{% if l.category %}<span class="cat">{{ l.category }}</span>{% else %}—{% endif %}</td>
+          <td data-k="cat">{% if l.category %}<a class="cat" href="{{ url_for('index', all=1, category=l.category, raw=request.args.get('raw',''), status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
           <td data-k="city">{{ l.city or l.address or '—' }}</td>
           <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td style="white-space:nowrap">
@@ -218,9 +228,9 @@
         </tr>
       {% else %}
         <tr><td colspan="9"><div class="empty">
-          <h3>Список поки порожній</h3>
-          <p><b>Лід</b> — потенційний клієнт: бізнес, якому можна продати сайт, рекламу чи AI-автоматизацію.</p>
-          <p>Ліворуч обери <b>область</b> і тип, натисни <b>«Зібрати клієнтів»</b>. Тоді тисни <b>«Без сайту»</b> — покажу найкращі цілі.</p>
+          <h3>Тут порожньо</h3>
+          <p>У цьому виді немає бізнесів. Зібрані заклади <b>без email, телефону й соцмереж</b> сюди не потрапляють — зателефонувати їм усе одно нема куди.</p>
+          <p>Натисни <b>«Усі підряд»</b>, щоб побачити взагалі всіх, або збери ще одну область ліворуч.</p>
         </div></td></tr>
       {% endfor %}
       </tbody>

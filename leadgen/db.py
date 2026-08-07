@@ -151,9 +151,18 @@ def set_coords(conn, lead_id: int, lat: float, lon: float) -> None:
     conn.execute(update(LEADS).where(LEADS.c.id == lead_id).values(lat=lat, lon=lon))
 
 
+def _has(col):
+    return and_(col.is_not(None), col != "")
+
+
 def _filter_conditions(search="", category="", status="", has_email="",
-                       country="", region="", opp=""):
+                       country="", region="", opp="",
+                       contactable=False, hide_done=False):
     conds = []
+    if contactable:  # nothing to do with a business you cannot reach
+        conds.append(or_(_has(LEADS.c.email), _has(LEADS.c.phone), _has(LEADS.c.social)))
+    if hide_done:  # already handled — they move to the Успішні / Відмови views
+        conds.append(LEADS.c.email_status.notin_(("success", "rejected")))
     if search:
         like = f"%{search}%"
         conds.append(or_(LEADS.c.name.ilike(like), LEADS.c.email.ilike(like),
@@ -188,8 +197,10 @@ _TARGET_ORDER = (
 
 def query_leads(search: str = "", category: str = "", status: str = "",
                 has_email: str = "", country: str = "", region: str = "",
-                opp: str = "", limit: int = 500) -> list[dict]:
-    conds = _filter_conditions(search, category, status, has_email, country, region, opp)
+                opp: str = "", contactable: bool = False, hide_done: bool = False,
+                limit: int = 500) -> list[dict]:
+    conds = _filter_conditions(search, category, status, has_email, country, region,
+                               opp, contactable, hide_done)
     stmt = (select(LEADS).where(and_(*conds)) if conds else select(LEADS))
     stmt = stmt.order_by(*_TARGET_ORDER).limit(limit)
     with connect() as conn:
@@ -198,9 +209,10 @@ def query_leads(search: str = "", category: str = "", status: str = "",
 
 def count_leads(search: str = "", category: str = "", status: str = "",
                 has_email: str = "", country: str = "", region: str = "",
-                opp: str = "") -> int:
+                opp: str = "", contactable: bool = False, hide_done: bool = False) -> int:
     """How many leads match — so the UI can say 'showing 500 of 1143'."""
-    conds = _filter_conditions(search, category, status, has_email, country, region, opp)
+    conds = _filter_conditions(search, category, status, has_email, country, region,
+                               opp, contactable, hide_done)
     stmt = select(func.count()).select_from(LEADS)
     if conds:
         stmt = stmt.where(and_(*conds))

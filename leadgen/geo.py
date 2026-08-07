@@ -55,6 +55,28 @@ CATEGORY_LABELS: dict[str, str] = {
 }
 
 
+# Raw OSM category values -> short Ukrainian label for the table badge.
+CATEGORY_ONE: dict[str, str] = {
+    "cafe": "кав'ярня", "restaurant": "ресторан", "fast_food": "фастфуд",
+    "bakery": "пекарня", "bar": "бар", "pub": "паб", "nightclub": "нічний клуб",
+    "hotel": "готель", "guest_house": "готель", "hostel": "хостел",
+    "apartment": "апартаменти", "motel": "мотель",
+    "dentist": "стоматологія", "doctors": "клініка", "clinic": "клініка",
+    "veterinary": "ветклініка", "pharmacy": "аптека",
+    "beauty": "салон краси", "hairdresser": "перукарня", "massage": "масаж",
+    "fitness_centre": "спортзал", "sports_centre": "спорткомплекс",
+    "car_repair": "автосервіс", "car_wash": "автомийка", "tyres": "шиномонтаж",
+    "lawyer": "юрист", "estate_agent": "нерухомість", "company": "компанія",
+    "shop": "магазин", "supermarket": "супермаркет", "convenience": "продукти",
+    "clothes": "одяг", "florist": "квіти", "furniture": "меблі",
+}
+
+
+def category_label(value: str) -> str:
+    """Ukrainian label for a stored OSM category (falls back to the raw value)."""
+    return CATEGORY_ONE.get((value or "").strip(), value or "")
+
+
 def geocode_query(country: str, region: str) -> str:
     """Nominatim query for a whole region, e.g. 'Львівська область, Ukraine'."""
     meta = COUNTRIES.get(country, {})

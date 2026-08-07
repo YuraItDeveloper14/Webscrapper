@@ -30,7 +30,7 @@ from leadgen.scrape_osm import scrape_osm, CATEGORY_FILTERS
 from leadgen.extract_emails import enrich_emails
 from leadgen.geo import (COUNTRIES as GEO_COUNTRIES,
                          geocode_query as geo_geocode_query,
-                         CATEGORY_LABELS)
+                         CATEGORY_LABELS, category_label)
 from leadgen.score import opportunity
 
 app = Flask(__name__)
@@ -109,6 +109,7 @@ def gmaps_url(lead: dict) -> str:
 
 app.jinja_env.globals["gmaps_url"] = gmaps_url
 app.jinja_env.globals["opportunity"] = opportunity
+app.jinja_env.globals["category_label"] = category_label
 
 
 def _query_and_filter(args, limit=1000):
@@ -122,8 +123,12 @@ def _query_and_filter(args, limit=1000):
         "region": args.get("region", ""),
     }
     opp = args.get("opp", "")  # "" | nosite | weak
-    leads = db.query_leads(limit=limit, opp=opp, **filters)
-    return leads, filters, opp
+    # the working list hides leads already handled and ones with no way to reach
+    # them; ?raw=1 or a status chip shows everything
+    working = not (args.get("status") or args.get("raw"))
+    leads = db.query_leads(limit=limit, opp=opp, contactable=working,
+                           hide_done=working, **filters)
+    return leads, filters, opp, working
 
 
 # ---- routes ------------------------------------------------------------------
@@ -132,8 +137,10 @@ def index():
     # "blank" = nothing chosen yet -> keep the results panel empty (limit 0 = no rows)
     blank = not any(request.args.get(k, "").strip()
                     for k in ("search", "status", "category", "region", "opp", "all"))
-    leads, filters, opp = _query_and_filter(request.args, limit=0 if blank else PAGE_LIMIT)
-    total = 0 if blank else db.count_leads(opp=opp, **filters)
+    leads, filters, opp, working = _query_and_filter(
+        request.args, limit=0 if blank else PAGE_LIMIT)
+    total = 0 if blank else db.count_leads(opp=opp, contactable=working,
+                                           hide_done=working, **filters)
     # refine the SQL ordering within the page: best sales targets first
     leads.sort(key=lambda l: -opportunity(l)["score"])
     return render_template(
@@ -220,7 +227,7 @@ def jobs_json():
 @app.route("/export")
 def export():
     # same query the page uses, so the file always matches what is on screen
-    leads, _f, _o = _query_and_filter(request.args, limit=100000)
+    leads, _f, _o, _w = _query_and_filter(request.args, limit=100000)
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["name", "email", "phone", "website", "social", "city", "region",
