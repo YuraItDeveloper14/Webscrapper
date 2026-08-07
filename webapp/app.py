@@ -85,7 +85,8 @@ def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: i
                             total_added += 1
                 except Exception:
                     continue
-        db.dedupe_existing()  # clean any node+way duplicates from this batch
+        db.dedupe_existing()    # node+way duplicates from this batch
+        db.drop_cross_border()  # anything that slipped in from across a border
         JOBS[jid]["added"] = total_added
 
     try:

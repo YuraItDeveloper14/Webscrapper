@@ -7,6 +7,7 @@ so the same code emits correct SQL for either dialect.
 from __future__ import annotations
 
 import os
+import re
 import csv
 from pathlib import Path
 from contextlib import contextmanager
@@ -248,6 +249,34 @@ def clear_all() -> int:
     return n
 
 
+# International dialling prefix per collection country.
+COUNTRY_DIAL = {"Україна": "+380", "Польща": "+48", "Велика Британія": "+44",
+                "Німеччина": "+49", "Чехія": "+420", "США": "+1"}
+
+
+def drop_cross_border() -> int:
+    """Delete leads whose phone belongs to a different country than the search.
+
+    Older scrapes used a bounding box, which spilled over borders — a Zakarpattia
+    run could return Slovak, Romanian or Hungarian places.
+    """
+    from sqlalchemy import delete
+    with connect() as conn:
+        rows = conn.execute(
+            select(LEADS.c.id, LEADS.c.country, LEADS.c.phone)
+            .where(and_(LEADS.c.phone.is_not(None), LEADS.c.phone.like("%+%")))
+        ).mappings().all()
+        remove = []
+        for r in rows:
+            want = COUNTRY_DIAL.get(r["country"] or "")
+            phone = re.sub(r"[^\d+]", "", r["phone"] or "")
+            if want and phone.startswith("+") and not phone.startswith(want):
+                remove.append(r["id"])
+        if remove:
+            conn.execute(delete(LEADS).where(LEADS.c.id.in_(remove)))
+    return len(remove)
+
+
 def dedupe_existing() -> int:
     """Collapse rows sharing (name, city), keeping the most useful one.
 
@@ -372,3 +401,7 @@ def export_csv(out_path: Path, only_with_email: bool = True, dedupe_email: bool 
         for r in out:
             w.writerow([r[c] for c in cols])
     return len(out)
+
+
+# One-off cleanup of leads collected before scrapes were scoped to exact borders.
+drop_cross_border()

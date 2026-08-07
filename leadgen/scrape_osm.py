@@ -42,30 +42,43 @@ CATEGORY_FILTERS: dict[str, list[str]] = {
 }
 
 
-async def geocode_city(city: str, client: httpx.AsyncClient) -> tuple[float, float, float, float]:
-    """Return (south, west, north, east) bbox for a city name via Nominatim."""
-    r = await client.get(NOMINATIM, params={"q": city, "format": "json", "limit": 1},
+async def geocode_area(place: str, client: httpx.AsyncClient) -> dict:
+    """Resolve a place to its OSM area id (exact borders) plus a bbox fallback.
+
+    Querying by area keeps results inside the region; a bounding box would spill
+    over into neighbouring countries along the border.
+    """
+    r = await client.get(NOMINATIM, params={"q": place, "format": "json", "limit": 1},
                          headers=HEADERS, timeout=30)
     r.raise_for_status()
     data = r.json()
     if not data:
-        raise ValueError(f"City not found: {city!r}")
+        raise ValueError(f"Place not found: {place!r}")
+    hit = data[0]
     # Nominatim boundingbox = [minlat, maxlat, minlon, maxlon]
-    minlat, maxlat, minlon, maxlon = map(float, data[0]["boundingbox"])
-    return (minlat, minlon, maxlat, maxlon)  # south, west, north, east
+    minlat, maxlat, minlon, maxlon = map(float, hit["boundingbox"])
+    area_id = None
+    if hit.get("osm_type") == "relation":   # Overpass area ids: 3600000000 + relation id
+        area_id = 3600000000 + int(hit["osm_id"])
+    return {"area_id": area_id, "bbox": (minlat, minlon, maxlat, maxlon)}
 
 
-def _build_query(filters: list[str], bbox: tuple, timeout: int = 90, out_limit: int = 600) -> str:
-    s, w, n, e = bbox
-    box = f"{s},{w},{n},{e}"
+def _build_query(filters: list[str], area_id: int | None = None, bbox: tuple | None = None,
+                 timeout: int = 120, out_limit: int = 600) -> str:
+    """Build an Overpass query scoped to an exact area, or to a bbox as fallback."""
+    if area_id:
+        head, scope = f"area({area_id})->.a;", "(area.a)"
+    else:
+        s, w, n, e = bbox
+        head, scope = "", f"({s},{w},{n},{e})"
     parts = []
     for f in filters:
         # node + way so we catch both point and building-mapped businesses
-        parts.append(f"  node[{f}]({box});")
-        parts.append(f"  way[{f}]({box});")
+        parts.append(f"  node[{f}]{scope};")
+        parts.append(f"  way[{f}]{scope};")
     body = "\n".join(parts)
     # cap how many elements Overpass returns so whole-region queries stay fast
-    return f"[out:json][timeout:{timeout}];\n(\n{body}\n);\nout center tags {out_limit};"
+    return f"[out:json][timeout:{timeout}];\n{head}\n(\n{body}\n);\nout center tags {out_limit};"
 
 
 async def _overpass(query: str, client: httpx.AsyncClient, attempts: int = 3) -> list[dict]:
@@ -159,9 +172,15 @@ async def scrape_osm(geocode_q: str, category: str, max_results: int = 200,
         filters = [category] if "=" in category else ["shop"]
     geo = {"country": country, "region": region, "city": city}
     async with httpx.AsyncClient() as client:
-        bbox = await geocode_city(geocode_q, client)
-        query = _build_query(filters, bbox, out_limit=max_results + 100)
-        elements = await _overpass(query, client)
+        place = await geocode_area(geocode_q, client)
+        limit = max_results + 100
+        elements = []
+        if place["area_id"]:
+            elements = await _overpass(
+                _build_query(filters, area_id=place["area_id"], out_limit=limit), client)
+        if not elements:  # no boundary relation, or the area query came back empty
+            elements = await _overpass(
+                _build_query(filters, bbox=place["bbox"], out_limit=limit), client)
     leads, seen = [], set()
     for el in elements:
         # `query` stores the chosen category key so a search can show exactly
