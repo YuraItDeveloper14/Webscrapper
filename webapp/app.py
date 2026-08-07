@@ -32,6 +32,7 @@ from leadgen.geo import (COUNTRIES as GEO_COUNTRIES,
                          geocode_query as geo_geocode_query,
                          CATEGORY_LABELS, category_label)
 from leadgen.score import opportunity
+from leadgen.phone import phone_kind
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "leadgen-local-panel")
@@ -111,6 +112,7 @@ def gmaps_url(lead: dict) -> str:
 app.jinja_env.globals["gmaps_url"] = gmaps_url
 app.jinja_env.globals["opportunity"] = opportunity
 app.jinja_env.globals["category_label"] = category_label
+app.jinja_env.globals["phone_kind"] = phone_kind
 
 
 def _query_and_filter(args, limit=1000):
@@ -237,16 +239,19 @@ def export():
     leads, _f, _o, _w = _query_and_filter(request.args, limit=100000)
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["name", "email", "phone", "website", "social", "city", "region",
-                "address", "category", "chance", "status"])
+    w.writerow(["name", "email", "phone", "phone_type", "website", "social", "city",
+                "region", "address", "category", "chance", "status"])
     seen = set()
     for l in leads:
         key = (l.get("email") or "").lower()
         if key and key in seen:
             continue
         seen.add(key)
-        w.writerow([l["name"], l["email"], l["phone"], l["website"], l.get("social") or "",
-                    l.get("city") or "", l.get("region") or "", l["address"], l["category"],
+        kind = phone_kind(l["phone"], l.get("country"))
+        w.writerow([l["name"], l["email"], l["phone"],
+                    {"mobile": "мобільний", "landline": "стаціонарний"}.get(kind, ""),
+                    l["website"], l.get("social") or "", l.get("city") or "",
+                    l.get("region") or "", l["address"], l["category"],
                     opportunity(l)["reasons"][0], l["email_status"]])
     return Response(
         "﻿" + buf.getvalue(),

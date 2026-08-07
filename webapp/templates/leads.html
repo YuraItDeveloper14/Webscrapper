@@ -51,6 +51,8 @@
   .em a{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
   .em .none,.ph .none{color:var(--ink-faint)}
   .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  .pk{display:block;font-size:11px;font-weight:600;margin-top:3px}
+  .pk-mobile{color:var(--green)} .pk-landline{color:var(--ink-faint)}
   .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;opacity:0;transition:.12s}
   tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
   .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
@@ -206,7 +208,10 @@
           <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onChk()"></td>
           <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span>{% if l.social %}<br><a class="soc" href="{{ l.social }}" target="_blank" rel="noopener">соцмережі ↗</a>{% endif %}</td>
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
-          <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>{% else %}<span class="none">—</span>{% endif %}</td>
+          <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>
+            {% set pk = phone_kind(l.phone, l.country) %}
+            {% if pk %}<span class="pk pk-{{ pk }}">{{ 'мобільний' if pk=='mobile' else 'стаціонарний' }}</span>{% endif %}
+            {% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}"><span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
           <td data-k="cat">{% if l.category %}<a class="cat" href="{{ url_for('index', all=1, category=l.category, status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
           <td data-k="city">{{ l.city or l.address or '—' }}</td>
