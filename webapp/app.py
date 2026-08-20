@@ -44,7 +44,8 @@ _job_seq = 0
 _lock = threading.Lock()
 
 
-JOB_TTL = 6  # seconds a finished job message stays visible
+JOB_TTL = 6        # seconds a finished job message stays visible
+ERROR_TTL = 45     # failures linger longer so they are not missed
 
 
 def _new_job(label: str) -> int:
@@ -62,33 +63,50 @@ def _recent_jobs():
     """Running jobs + ones that finished within the last JOB_TTL seconds."""
     now = time.time()
     out = [j for j in JOBS.values()
-           if j["state"] == "running" or (now - j.get("finished", 0)) < JOB_TTL]
+           if j["state"] == "running"
+           or (now - j.get("finished", 0)) < (ERROR_TTL if j["state"] == "error" else JOB_TTL)]
     return sorted(out, key=lambda j: -j["id"])[:5]
+
+
+def _save_leads(leads: list[dict]) -> tuple[int, int]:
+    """Write leads to the DB. Returns (newly added, rows that failed)."""
+    added = failed = 0
+    with db.connect() as conn:
+        for lead in leads:
+            # savepoint per row: one bad record must not discard the whole batch
+            try:
+                with conn.begin_nested():
+                    if db.upsert_lead(conn, lead):
+                        added += 1
+            except Exception:
+                failed += 1
+    return added, failed
 
 
 def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: int) -> None:
     async def work():
-        total_added = 0
         all_leads = []
         for tg in targets:
             leads = await scrape_osm(tg["geocode_q"], category, max_results=max_results,
                                      country=tg["country"], region=tg["region"], city=tg["city"])
             all_leads.extend(leads)
             JOBS[jid]["found"] = len(all_leads)
+        if not all_leads:
+            raise RuntimeError("на цій території нічого не знайшлося")
+
+        # Store the businesses BEFORE hunting for emails. That part visits every
+        # site and takes minutes, and a restart mid-way used to throw the whole
+        # scrape away; now the phones are already safe on disk.
+        added, failed = _save_leads(all_leads)
+        JOBS[jid]["added"] = added
+        if failed == len(all_leads):
+            raise RuntimeError("не вдалося зберегти жодного запису")
+
         await enrich_emails(all_leads, concurrency=8)
         JOBS[jid]["with_email"] = sum(1 for l in all_leads if l.get("email"))
-        with db.connect() as conn:
-            for lead in all_leads:
-                # savepoint per row: one bad record must not discard the whole scrape
-                try:
-                    with conn.begin_nested():
-                        if db.upsert_lead(conn, lead):
-                            total_added += 1
-                except Exception:
-                    continue
+        _save_leads(all_leads)  # second pass writes the found emails onto the rows
         db.dedupe_existing()    # node+way duplicates from this batch
         db.drop_cross_border()  # anything that slipped in from across a border
-        JOBS[jid]["added"] = total_added
 
     try:
         asyncio.run(work())
@@ -147,12 +165,15 @@ def index():
         request.args, limit=0 if blank else PAGE_LIMIT)
     total = 0 if blank else db.count_leads(opp=opp, contactable=working,
                                            hide_done=working, **filters)
+    # when a search has rows but none are callable, say so instead of "nothing found"
+    stored = db.count_leads(**filters) if (not blank and total == 0) else total
     # refine the SQL ordering within the page: best sales targets first
     leads.sort(key=lambda l: -opportunity(l)["score"])
     return render_template(
         "leads.html",
         leads=leads,
         total=total,
+        stored=stored,
         filters=filters,
         opp=opp,
         blank=blank,
@@ -196,8 +217,10 @@ def scrape():
     if any(j["state"] == "running" for j in JOBS.values()):
         flash("Збір уже триває — зачекайте, поки він завершиться.", "error")
         return redirect(url_for("index", all=1))
-    # already scraped this exact search before — reuse it instead of hitting OSM again
-    if db.count_leads(country=country, region=region, cat_key=category):
+    # Already scraped this exact search and it produced usable leads — reuse it.
+    # Counting only contactable rows means a run that failed or found nothing
+    # callable can still be retried instead of being cached as an empty result.
+    if db.count_leads(country=country, region=region, cat_key=category, contactable=True):
         return redirect(url_for("index", all=1, c=country, r=region, cat=category))
     target = {"geocode_q": geo_geocode_query(country, region),
               "country": country, "region": region, "city": ""}
