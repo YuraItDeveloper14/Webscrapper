@@ -86,9 +86,13 @@ async def _overpass(query: str, client: httpx.AsyncClient, attempts: int = 3) ->
 
     504/429 and timeouts are common when the public servers are busy, so we
     retry each endpoint a few times with a growing backoff before giving up.
+
+    An empty list means Overpass really found nothing. Any failure raises, so a
+    rejected or throttled request is never mistaken for an empty region.
     """
     last = None
     for attempt in range(attempts):
+        rejected = 0
         for ep in OVERPASS_ENDPOINTS:
             try:
                 r = await client.post(ep, data={"data": query}, headers=HEADERS, timeout=180)
@@ -96,9 +100,11 @@ async def _overpass(query: str, client: httpx.AsyncClient, attempts: int = 3) ->
                     return r.json().get("elements", [])
                 last = f"{ep} -> HTTP {r.status_code}"
                 if r.status_code not in (429, 502, 503, 504):
-                    return []  # a real client error (e.g. bad query) — don't hammer
+                    rejected += 1  # this mirror refused it; the others may not
             except Exception as exc:
                 last = f"{ep} -> {exc}"
+        if rejected == len(OVERPASS_ENDPOINTS):   # every mirror refused — a bad query
+            raise RuntimeError(f"Overpass rejected the query: {last}")
         if attempt < attempts - 1:
             await asyncio.sleep(3 * (attempt + 1))  # 3s, 6s backoff between rounds
     raise RuntimeError(f"Overpass busy after {attempts} tries: {last}")

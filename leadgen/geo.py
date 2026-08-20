@@ -31,7 +31,9 @@ COUNTRIES: dict[str, dict] = {
         "Praha", "Jihomoravský kraj", "Moravskoslezský kraj", "Plzeňský kraj",
     ]},
     "США": {"suffix": "USA", "kind": "plain", "regions": [
-        "California", "New York", "Texas", "Florida", "Illinois", "Washington",
+        # "Washington State", not "Washington" — the latter resolves to the
+        # capital city in D.C. rather than the state.
+        "California", "New York", "Texas", "Florida", "Illinois", "Washington State",
     ]},
 }
 
