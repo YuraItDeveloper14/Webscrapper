@@ -146,10 +146,9 @@
         <div class="sub">Обери область і тип бізнесу — зберу всі заклади області та знайду контакти.</div></div>
       <div class="panel-b">
         <form method="post" action="{{ url_for('scrape') }}" id="scrapeForm">
-          <label>Країна</label><div id="dd-country"></div>
-          <label>Область / регіон</label><div id="dd-region"></div>
+          <label>Область</label><div id="dd-region"></div>
           <label>Тип бізнесу</label><div id="dd-category"></div>
-          <input type="hidden" name="country" id="f-country">
+          <input type="hidden" name="country" id="f-country" value="{{ country }}">
           <input type="hidden" name="region" id="f-region">
           <input type="hidden" name="category" id="f-category">
           <div style="margin-top:18px"><button class="btn" type="submit">Зібрати клієнтів</button></div>
@@ -267,6 +266,7 @@
 <script>
 const GEO = {{ geo|tojson }};
 const CATS = {{ category_labels|tojson }};
+const COUNTRY = {{ country|tojson }};
 
 /* ---- custom form dropdowns ---- */
 let openCsel=null;
@@ -287,15 +287,12 @@ function makeSelect(mountId, hiddenId, opts, current, onChange, ph){
 }
 document.addEventListener('click',()=>{ if(openCsel){openCsel.classList.remove('open');openCsel=null;} });
 
-function buildRegion(country,pick){
-  makeSelect('dd-region','f-region',GEO[country].regions.map(r=>({v:r,l:r})),pick||null,null,'Оберіть область');
-}
-// after a scrape the redirect carries c/r/cat so the form keeps what was chosen;
-// a plain load has none of them → empty placeholders
-const Q=new URLSearchParams(location.search), qc=Q.get('c'), qr=Q.get('r'), qcat=Q.get('cat');
-makeSelect('dd-country','f-country',Object.keys(GEO).map(c=>({v:c,l:c})),
-           GEO[qc]?qc:null, buildRegion, 'Оберіть країну');
-if(GEO[qc]) buildRegion(qc,qr); else makeSelect('dd-region','f-region',[],null,null,'Спершу оберіть країну');
+// after a scrape the redirect carries r/cat so the form keeps what was chosen;
+// a plain load has neither → empty placeholders
+const Q=new URLSearchParams(location.search), qr=Q.get('r'), qcat=Q.get('cat');
+const REGIONS=GEO[COUNTRY].regions;
+makeSelect('dd-region','f-region',REGIONS.map(r=>({v:r,l:r})),
+           REGIONS.includes(qr)?qr:null, null, 'Оберіть область');
 makeSelect('dd-category','f-category',Object.entries(CATS).map(([v,l])=>({v,l})),
            CATS[qcat]?qcat:null, null, 'Оберіть тип бізнесу');
 

@@ -45,14 +45,14 @@ def opportunity(lead: dict) -> dict:
         if w.startswith("http://"):
             score += 22
             reasons.append("без HTTPS")
-        if lead.get("site_ok") == 0:
-            score += 38
-            reasons.append("сайт не відкривається")
-        if lead.get("mobile") == 0:
+        # "site does not open" was claimed here from a single automated fetch and
+        # was wrong often enough to embarrass a caller — plenty of sites simply
+        # refuse bots. Non-mobile is only stated when the page was actually read.
+        if lead.get("site_ok") == 1 and lead.get("mobile") == 0:
             score += 16
             reasons.append("не мобільний")
         if not reasons:
-            reasons.append("має робочий сайт")
+            reasons.append("має сайт")
             angle = "реклама / AI-автоматизація"
 
     # reachability bumps priority for cold calling (not opportunity itself)

@@ -6,34 +6,17 @@ Nominatim resolves them to the right admin area.
 """
 from __future__ import annotations
 
+COUNTRY = "Україна"
+
+# Kyiv first, then all 24 oblasts alphabetically.
 COUNTRIES: dict[str, dict] = {
-    "Україна": {"suffix": "Ukraine", "kind": "oblast", "regions": [
-        "м. Київ", "Київська", "Львівська", "Харківська", "Одеська",
-        "Дніпропетровська", "Запорізька", "Вінницька", "Полтавська",
-        "Івано-Франківська", "Тернопільська", "Волинська", "Рівненська",
-        "Хмельницька", "Черкаська", "Чернівецька", "Чернігівська", "Житомирська",
-        "Сумська", "Миколаївська", "Херсонська", "Кіровоградська", "Закарпатська",
-    ]},
-    "Польща": {"suffix": "Poland", "kind": "plain", "regions": [
-        "Mazowieckie", "Małopolskie", "Dolnośląskie", "Wielkopolskie",
-        "Pomorskie", "Śląskie", "Łódzkie", "Lubelskie", "Podkarpackie",
-        "Zachodniopomorskie",
-    ]},
-    "Велика Британія": {"suffix": "United Kingdom", "kind": "plain", "regions": [
-        "Greater London", "Greater Manchester", "West Midlands", "West Yorkshire",
-        "Merseyside", "Scotland", "Wales",
-    ]},
-    "Німеччина": {"suffix": "Germany", "kind": "plain", "regions": [
-        "Berlin", "Bayern", "Hamburg", "Nordrhein-Westfalen", "Hessen",
-        "Baden-Württemberg", "Sachsen",
-    ]},
-    "Чехія": {"suffix": "Czechia", "kind": "plain", "regions": [
-        "Praha", "Jihomoravský kraj", "Moravskoslezský kraj", "Plzeňský kraj",
-    ]},
-    "США": {"suffix": "USA", "kind": "plain", "regions": [
-        # "Washington State", not "Washington" — the latter resolves to the
-        # capital city in D.C. rather than the state.
-        "California", "New York", "Texas", "Florida", "Illinois", "Washington State",
+    COUNTRY: {"suffix": "Ukraine", "kind": "oblast", "regions": [
+        "м. Київ",
+        "Вінницька", "Волинська", "Дніпропетровська", "Донецька", "Житомирська",
+        "Закарпатська", "Запорізька", "Івано-Франківська", "Київська",
+        "Кіровоградська", "Луганська", "Львівська", "Миколаївська", "Одеська",
+        "Полтавська", "Рівненська", "Сумська", "Тернопільська", "Харківська",
+        "Херсонська", "Хмельницька", "Черкаська", "Чернівецька", "Чернігівська",
     ]},
 }
 

@@ -29,7 +29,7 @@ from leadgen import db
 from leadgen.scrape_osm import scrape_osm, CATEGORY_FILTERS
 from leadgen.extract_emails import enrich_emails
 from leadgen.verify import verify_leads
-from leadgen.geo import (COUNTRIES as GEO_COUNTRIES,
+from leadgen.geo import (COUNTRIES as GEO_COUNTRIES, COUNTRY,
                          geocode_query as geo_geocode_query,
                          CATEGORY_LABELS, category_label)
 from leadgen.score import opportunity
@@ -201,6 +201,7 @@ def index():
         statuses=db.VALID_STATUSES,
         category_labels=CATEGORY_LABELS,
         geo=GEO_COUNTRIES,
+        country=COUNTRY,
         jobs=_recent_jobs(),
     )
 
@@ -225,11 +226,11 @@ PAGE_LIMIT = 500
 
 @app.route("/scrape", methods=["POST"])
 def scrape():
-    country = request.form.get("country", "").strip()
+    country = COUNTRY                       # the panel is Ukraine-only
     region = request.form.get("region", "").strip()
     category = request.form.get("category", "").strip()
-    if not (country and region and category):
-        flash("Оберіть країну, область і тип бізнесу.", "error")
+    if not (region and category):
+        flash("Оберіть область і тип бізнесу.", "error")
         return redirect(url_for("index"))
     if any(j["state"] == "running" for j in JOBS.values()):
         flash("Збір уже триває — зачекайте, поки він завершиться.", "error")
