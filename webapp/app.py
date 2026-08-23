@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from leadgen import db
 from leadgen.scrape_osm import scrape_osm, CATEGORY_FILTERS
 from leadgen.extract_emails import enrich_emails
+from leadgen.verify import verify_leads
 from leadgen.geo import (COUNTRIES as GEO_COUNTRIES,
                          geocode_query as geo_geocode_query,
                          CATEGORY_LABELS, category_label)
@@ -104,7 +105,10 @@ def _run_scrape_job(jid: int, targets: list[dict], category: str, max_results: i
 
         await enrich_emails(all_leads, concurrency=8)
         JOBS[jid]["with_email"] = sum(1 for l in all_leads if l.get("email"))
-        _save_leads(all_leads)  # second pass writes the found emails onto the rows
+        # Prove which of the "no site listed" ones actually do have a site, so a
+        # call never opens with a claim that turns out to be wrong.
+        await verify_leads(all_leads, concurrency=6)
+        _save_leads(all_leads)  # second pass writes emails and found sites onto the rows
         db.dedupe_existing()    # node+way duplicates from this batch
         db.drop_cross_border()  # anything that slipped in from across a border
 
@@ -243,6 +247,35 @@ def scrape():
                      daemon=True).start()
     # c/r/cat only repopulate the form after the redirect — they are not filters
     return redirect(url_for("index", all=1, c=country, r=region, cat=category))
+
+
+def _run_verify_job(jid: int, leads: list[dict]) -> None:
+    """Check the leads in the current view for websites OSM did not list."""
+    try:
+        found = asyncio.run(verify_leads(leads, concurrency=6))
+        JOBS[jid]["found"] = len(leads)
+        JOBS[jid]["added"] = found
+        _save_leads([l for l in leads if (l.get("website") or "").strip()])
+        JOBS[jid]["state"] = "done"
+    except Exception as exc:
+        JOBS[jid]["state"] = "error"
+        JOBS[jid]["error"] = str(exc)[:300]
+    JOBS[jid]["finished"] = time.time()
+
+
+@app.route("/verify", methods=["POST"])
+def verify():
+    if any(j["state"] == "running" for j in JOBS.values()):
+        flash("Зачекайте, поки завершиться поточна перевірка.", "error")
+        return redirect(request.referrer or url_for("index"))
+    leads, _f, _o, _w = _query_and_filter(request.args, limit=400)
+    todo = [l for l in leads if not (l.get("website") or "").strip() and l.get("phone")]
+    if not todo:
+        flash("Нема чого перевіряти — у цьому списку немає лідів із телефоном і без сайту.", "ok")
+        return redirect(request.referrer or url_for("index"))
+    jid = _new_job(f"Перевірка сайтів · {len(todo)}")
+    threading.Thread(target=_run_verify_job, args=(jid, todo), daemon=True).start()
+    return redirect(request.referrer or url_for("index"))
 
 
 @app.route("/lead/<int:lead_id>/status", methods=["POST"])

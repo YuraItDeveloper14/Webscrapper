@@ -193,6 +193,9 @@
         <input name="search" value="{{ filters.search }}" placeholder="пошук за назвою або email…">
         {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status) }}">✕</a>{% endif %}
       </form>
+      <form method="post" action="{{ url_for('verify', **request.args.to_dict()) }}" style="margin:0">
+        <button class="btn ghost sm" type="submit" title="Знайти тих, у кого сайт насправді є — перевірка за їхнім номером телефону">Перевірити сайти</button>
+      </form>
       <a class="btn ghost sm" href="{{ url_for('export', **request.args.to_dict()) }}">Експорт у Excel</a>
       <button class="collapse-btn" id="collapseBtn" onclick="toggleList()" title="Згорнути список">✕</button>
     </div>
@@ -348,9 +351,14 @@ async function pollJobs(){try{
   const running=jobs.find(j=>j.state==='running');
   const results=document.getElementById('results'), jb=document.getElementById('jobs');
   if(running){
+    const checking = (running.label||'').startsWith('Перевірка');
     results.classList.add('busy');
-    document.getElementById('loadSub').textContent = running.found
-      ? 'знайдено '+running.found+' бізнесів — шукаю контакти…' : 'шукаю на мапі…';
+    document.querySelector('.load-txt').textContent =
+      checking ? 'Перевіряю, у кого насправді є сайт…' : 'Збираю бізнеси…';
+    document.getElementById('loadSub').textContent =
+      checking ? running.label.split('· ')[1] + ' закладів у черзі'
+               : (running.found ? 'знайдено '+running.found+' бізнесів — шукаю контакти…'
+                                : 'шукаю на мапі…');
     window._had=true; setTimeout(pollJobs,1500); return;
   }
   results.classList.remove('busy');
