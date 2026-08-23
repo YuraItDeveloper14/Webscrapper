@@ -58,12 +58,18 @@
   .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
     background:var(--sunk2);color:var(--ink-soft);white-space:nowrap;text-decoration:none}
   a.cat:hover{background:var(--ink);color:#fff}
+  .cityf{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
+  .cityf:hover{border-color:var(--ink)}
+  .addr{color:var(--ink-faint);font-size:12.5px}
   .chip.typechip{background:var(--sunk2);border-color:var(--ink);color:var(--ink)}
   .maps{color:var(--ink-soft);font-weight:600;font-size:13px;border-bottom:1px solid var(--border-strong)}
   .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;
     background:var(--sunk2);color:var(--ink);border:1px solid var(--border-strong)}
   .opp.has-site{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-line)}
   .opp-angle{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
+  .verify{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--ink);
+    border-bottom:1.5px solid var(--ink)}
+  .verify:hover{color:var(--green);border-color:var(--green)}
 
   /* soft left-to-right "brushstroke" tint by status */
   tr.st-marked{background:linear-gradient(90deg, rgba(234,179,8,.24) 0%, rgba(234,179,8,.07) 26%, transparent 55%)}
@@ -169,7 +175,10 @@
       <a class="chip {{ 'on' if filters.status=='success' }}" href="{{ url_for('index', status='success', **keep) }}">Успішні</a>
       <a class="chip {{ 'on' if filters.status=='rejected' }}" href="{{ url_for('index', status='rejected', **keep) }}">Відмови</a>
       {% if filters.category %}
-        <a class="chip on typechip" href="{{ url_for('index', all=1, status=filters.status, opp=opp, **keep) }}">{{ category_label(filters.category) }} ✕</a>
+        <a class="chip on typechip" href="{{ url_for('index', all=1, city=filters.city, status=filters.status, opp=opp, **keep) }}">{{ category_label(filters.category) }} ✕</a>
+      {% endif %}
+      {% if filters.city %}
+        <a class="chip on typechip" href="{{ url_for('index', all=1, category=filters.category, status=filters.status, opp=opp, **keep) }}">{{ filters.city }} ✕</a>
       {% endif %}
     </div>
     {% if blank %}
@@ -212,9 +221,13 @@
             {% set pk = phone_kind(l.phone, l.country) %}
             {% if pk %}<span class="pk pk-{{ pk }}">{{ 'мобільний' if pk=='mobile' else 'стаціонарний' }}</span>{% endif %}
             {% else %}<span class="none">—</span>{% endif %}</td>
-          <td data-k="opp" data-sort="{{ o.score }}"><span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span><span class="opp-angle">{{ o.angle }}</span></td>
+          <td data-k="opp" data-sort="{{ o.score }}">
+            <span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span>
+            {% if not l.website %}<a class="verify" href="{{ check_url(l) }}" target="_blank" rel="noopener" title="Перевірити в Google, чи є в них сайт — перед дзвінком">перевірити ↗</a>
+            {% else %}<span class="opp-angle">{{ o.angle }}</span>{% endif %}
+          </td>
           <td data-k="cat">{% if l.category %}<a class="cat" href="{{ url_for('index', all=1, category=l.category, status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
-          <td data-k="city">{{ l.city or l.address or '—' }}</td>
+          <td data-k="city">{% if l.city %}<a class="cityf" href="{{ url_for('index', all=1, city=l.city, category=filters.category, status=filters.status, opp=opp, **keep) }}" title="показати лише це місто">{{ l.city }}</a>{% else %}<span class="addr">{{ l.address or '—' }}</span>{% endif %}</td>
           <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td style="white-space:nowrap">
             <div class="dd">

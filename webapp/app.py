@@ -127,7 +127,19 @@ def gmaps_url(lead: dict) -> str:
     return "https://www.google.com/maps/search/?api=1&query=" + quote_plus(q)
 
 
+def check_url(lead: dict) -> str:
+    """Google search for this exact business — one click to see if a site exists.
+
+    OSM often omits the website tag, so the panel never claims a business has no
+    site; this link lets the answer be confirmed in seconds before dialling.
+    """
+    from urllib.parse import quote_plus
+    where = lead.get("city") or lead.get("region") or lead.get("country") or ""
+    return "https://www.google.com/search?q=" + quote_plus(f"{lead.get('name', '')} {where}".strip())
+
+
 app.jinja_env.globals["gmaps_url"] = gmaps_url
+app.jinja_env.globals["check_url"] = check_url
 app.jinja_env.globals["opportunity"] = opportunity
 app.jinja_env.globals["category_label"] = category_label
 app.jinja_env.globals["phone_kind"] = phone_kind
@@ -147,6 +159,7 @@ def _query_and_filter(args, limit=1000):
         "country": "" if status else args.get("c", ""),
         "region": "" if status else args.get("r", ""),
         "cat_key": "" if status else args.get("cat", ""),
+        "city": args.get("city", ""),
     }
     opp = args.get("opp", "")  # "" | nosite | weak
     working = not status       # hide handled leads and ones with no contact

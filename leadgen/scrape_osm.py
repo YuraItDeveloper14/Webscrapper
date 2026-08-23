@@ -149,7 +149,8 @@ def _to_lead(el: dict, query: str, geo: dict) -> dict:
     social = _social_link(t)
     return {
         "name": _tag(t, "name", "name:en", "brand"),
-        "website": _tag(t, "website", "contact:website"),
+        "website": _tag(t, "website", "contact:website", "url", "contact:url",
+                        "website:official", "official_website"),
         "email": _tag(t, "email", "contact:email"),
         "phone": _tag(t, "phone", "contact:phone"),
         "address": address,

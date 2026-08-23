@@ -27,8 +27,11 @@ def opportunity(lead: dict) -> dict:
 
     if not w:
         score += 60
-        reasons.append("немає сайту")
-        angle = "запропонувати сайт"
+        # Careful wording on purpose: OpenStreetMap simply has no site listed,
+        # which is not proof the business has none. Claiming otherwise on a call
+        # is embarrassing, so the UI offers a one-click check instead.
+        reasons.append("сайт не вказано")
+        angle = "перевір і пропонуй сайт"
     elif any(s in w for s in SOCIAL):
         score += 45
         reasons.append("лише соцмережа")
