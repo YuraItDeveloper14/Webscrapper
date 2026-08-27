@@ -31,7 +31,7 @@ from leadgen.extract_emails import enrich_emails
 from leadgen.verify import verify_leads
 from leadgen.geo import (COUNTRIES as GEO_COUNTRIES, COUNTRY,
                          geocode_query as geo_geocode_query,
-                         CATEGORY_LABELS, category_label)
+                         CATEGORY_LABELS, category_label, category_hue)
 from leadgen.score import opportunity
 from leadgen.phone import phone_kind
 
@@ -146,6 +146,7 @@ app.jinja_env.globals["gmaps_url"] = gmaps_url
 app.jinja_env.globals["check_url"] = check_url
 app.jinja_env.globals["opportunity"] = opportunity
 app.jinja_env.globals["category_label"] = category_label
+app.jinja_env.globals["category_hue"] = category_hue
 app.jinja_env.globals["phone_kind"] = phone_kind
 
 

@@ -3,11 +3,12 @@
 {% set LBL = {'new':'новий','marked':'позначення','success':'успішні','rejected':'відмова'} %}
 {% block style %}
   .chips{display:flex;gap:8px;flex-wrap:wrap;padding:15px 19px 0}
-  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:999px;
     border:1px solid var(--border-strong);background:var(--panel);color:var(--ink-soft);
-    font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
-  .chip:hover{border-color:var(--ink);color:var(--ink)}
-  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+    font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--brand);color:var(--brand)}
+  .chip.on{background:var(--brand);border-color:var(--brand);color:#fff;
+    box-shadow:0 4px 14px -6px var(--brand)}
 
   /* custom form dropdowns */
   .csel{position:relative;margin-top:6px}
@@ -40,9 +41,11 @@
   .bulkbar.show{display:flex}
   .scroll{overflow-x:auto;margin-top:12px}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  thead th{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint);
-    text-align:left;padding:10px 15px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  thead th{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft);
+    text-align:left;padding:11px 15px;background:var(--sunk);
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);
     white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--brand)}
   thead th.nos{cursor:default}
   tbody td{padding:11px 15px;border-bottom:1px solid var(--border);vertical-align:middle}
   tbody tr:hover td{background:var(--sunk)}
@@ -55,9 +58,21 @@
   .pk-mobile{color:var(--green)} .pk-landline{color:var(--ink-faint)}
   .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;opacity:0;transition:.12s}
   tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
-  .cat{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;
-    background:var(--sunk2);color:var(--ink-soft);white-space:nowrap;text-decoration:none}
-  a.cat:hover{background:var(--ink);color:#fff}
+  /* one hue per trade — a glance down the column separates the niches */
+  .cat{display:inline-block;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700;
+    white-space:nowrap;text-decoration:none;background:var(--slate-bg);color:var(--slate)}
+  .cat.h-amber{background:var(--amber-bg);color:var(--amber)}
+  .cat.h-grape{background:var(--grape-bg);color:var(--grape)}
+  .cat.h-violet{background:var(--violet-bg);color:var(--violet)}
+  .cat.h-teal{background:var(--teal-bg);color:var(--teal)}
+  .cat.h-pink{background:var(--pink-bg);color:var(--pink)}
+  .cat.h-orange{background:var(--orange-bg);color:var(--orange)}
+  .cat.h-blue{background:var(--blue-bg);color:var(--blue)}
+  .cat.h-cyan{background:var(--cyan-bg);color:var(--cyan)}
+  a.cat:hover{filter:brightness(.94)}
+  /* the only channel left when there is no phone or mail */
+  .only-soc{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+    color:var(--grape);background:var(--grape-bg);border-radius:999px;padding:4px 11px}
   .cityf{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
   .cityf:hover{border-color:var(--ink)}
   .addr{color:var(--ink-faint);font-size:12.5px}
@@ -72,9 +87,9 @@
   .verify:hover{color:var(--green);border-color:var(--green)}
 
   /* soft left-to-right "brushstroke" tint by status */
-  tr.st-marked{background:linear-gradient(90deg, rgba(234,179,8,.24) 0%, rgba(234,179,8,.07) 26%, transparent 55%)}
-  tr.st-success{background:linear-gradient(90deg, rgba(22,163,74,.20) 0%, rgba(22,163,74,.06) 26%, transparent 55%)}
-  tr.st-rejected{background:linear-gradient(90deg, rgba(220,38,38,.18) 0%, rgba(220,38,38,.05) 26%, transparent 55%)}
+  tr.st-marked{background:linear-gradient(90deg, rgba(251,191,36,.30) 0%, rgba(251,191,36,.08) 26%, transparent 55%)}
+  tr.st-success{background:linear-gradient(90deg, rgba(16,185,129,.26) 0%, rgba(16,185,129,.07) 26%, transparent 55%)}
+  tr.st-rejected{background:linear-gradient(90deg, rgba(244,63,94,.22) 0%, rgba(244,63,94,.06) 26%, transparent 55%)}
   tr.st-marked td,tr.st-success td,tr.st-rejected td{background:transparent}
   tr.st-marked:hover td,tr.st-success:hover td,tr.st-rejected:hover td{background:transparent}
 
@@ -222,13 +237,14 @@
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>
             {% set pk = phone_kind(l.phone, l.country) %}
             {% if pk %}<span class="pk pk-{{ pk }}">{{ 'мобільний' if pk=='mobile' else 'стаціонарний' }}</span>{% endif %}
+            {% elif l.social %}<a class="only-soc" href="{{ l.social }}" target="_blank" rel="noopener" title="Телефону немає — писати в дірект">✉ тільки соцмережі</a>
             {% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}">
             <span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span>
             {% if not l.website %}<a class="verify" href="{{ check_url(l) }}" target="_blank" rel="noopener" title="Перевірити в Google, чи є в них сайт — перед дзвінком">перевірити ↗</a>
             {% else %}<span class="opp-angle">{{ o.angle }}</span>{% endif %}
           </td>
-          <td data-k="cat">{% if l.category %}<a class="cat" href="{{ url_for('index', all=1, category=l.category, status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
+          <td data-k="cat">{% if l.category %}<a class="cat h-{{ category_hue(l.category) }}" href="{{ url_for('index', all=1, category=l.category, status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
           <td data-k="city">{% if l.city %}<a class="cityf" href="{{ url_for('index', all=1, city=l.city, category=filters.category, status=filters.status, opp=opp, **keep) }}" title="показати лише це місто">{{ l.city }}</a>{% else %}<span class="addr">{{ l.address or '—' }}</span>{% endif %}</td>
           <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td style="white-space:nowrap">

@@ -57,6 +57,28 @@ CATEGORY_ONE: dict[str, str] = {
 }
 
 
+# Colour per trade, so a glance down the table separates the niches. Ties a
+# category to one hue everywhere it appears — decoration would be noise.
+CATEGORY_HUE: dict[str, str] = {
+    "cafe": "amber", "restaurant": "amber", "fast_food": "amber", "bakery": "amber",
+    "bar": "grape", "pub": "grape", "nightclub": "grape",
+    "hotel": "violet", "guest_house": "violet", "hostel": "violet",
+    "apartment": "violet", "motel": "violet",
+    "dentist": "teal", "doctors": "teal", "clinic": "teal", "veterinary": "teal",
+    "pharmacy": "green",
+    "beauty": "pink", "hairdresser": "pink", "massage": "pink",
+    "fitness_centre": "orange", "sports_centre": "orange",
+    "car_repair": "blue", "car_wash": "blue", "tyres": "blue",
+    "lawyer": "slate", "estate_agent": "slate", "company": "slate",
+    "shop": "cyan", "supermarket": "cyan", "convenience": "cyan",
+    "clothes": "cyan", "florist": "pink", "furniture": "cyan",
+}
+
+
+def category_hue(value: str) -> str:
+    return CATEGORY_HUE.get((value or "").strip(), "slate")
+
+
 def category_label(value: str) -> str:
     """Ukrainian label for a stored OSM category (falls back to the raw value)."""
     return CATEGORY_ONE.get((value or "").strip(), value or "")
