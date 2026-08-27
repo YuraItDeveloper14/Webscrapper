@@ -6,103 +6,84 @@
 <title>{% block title %}leadgen{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 {% block head %}{% endblock %}
 <style>
   :root{
-    --page:#f5f6fb; --panel:#ffffff; --sunk:#f8f9fd; --sunk2:#eef0f8;
-    --ink:#0f172a; --ink-soft:#4b5670; --ink-faint:#8d96ae;
-    --border:#e6e9f2; --border-strong:#cdd3e4;
+    --page:#f4f4f2; --panel:#ffffff; --sunk:#faf9f7; --sunk2:#f1f0ed;
+    --ink:#1c1b19; --ink-soft:#6b6a64; --ink-faint:#9a988f;
+    --border:#e8e7e3; --border-strong:#d9d8d2;
 
-    --brand:#4f46e5; --brand-hi:#6366f1; --brand-bg:#eef0ff; --brand-line:#c9cdf8;
-    --navy:#131a33;
+    --accent:#1f1e1c;              /* near-black primary, as in the mockup */
+    --accent-hi:#37352f;
+    --green:#3f8f5c; --green-bg:#eef8f0; --green-line:#bfe0ca;
+    --amber:#a1701a; --amber-bg:#fdf6e8; --amber-line:#ecd9ae;
+    --red:#b4453f; --red-bg:#fceeed; --red-line:#eec9c6;
 
-    /* semantic — status only */
-    --green:#0f9d58; --green-bg:#e9f8ef; --green-line:#b4e6c8;
-    --yellow:#c07f00; --yellow-bg:#fff7e3; --yellow-line:#f3dda1;
-    --red:#dc2626; --red-bg:#fdeeee; --red-line:#f5c6c6;
-
-    /* categorical — one hue per trade */
-    --amber:#b45309; --amber-bg:#fff4e2;
-    --grape:#7c3aed; --grape-bg:#f3ecff;
-    --violet:#5b21b6; --violet-bg:#f1eaff;
-    --teal:#0d7c8a; --teal-bg:#e4f7f9;
-    --pink:#be185d; --pink-bg:#fdeaf2;
-    --orange:#c2410c; --orange-bg:#fff0e8;
-    --blue:#1d4ed8; --blue-bg:#eaf0ff;
-    --cyan:#0e7490; --cyan-bg:#e6f7fb;
-    --slate:#475569; --slate-bg:#eef1f6;
-
-    --radius:12px;
-    --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --radius:14px;
+    --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--page);color:var(--ink);
     font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
-  a{color:var(--brand);text-decoration:none}
-  a:hover{color:var(--brand-hi)}
-  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+  a{color:var(--ink);text-decoration:none}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
-  /* ---- dark command bar ---- */
-  header.top{background:var(--navy);color:#fff}
-  .top-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
-    padding:15px 26px;max-width:1320px;margin:0 auto}
-  .brand{display:flex;align-items:center;gap:12px;text-decoration:none}
-  .logo{width:36px;height:36px;border-radius:10px;color:#fff;font-weight:800;font-size:19px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,var(--brand-hi),#a855f7)}
-  .brand .name{font-weight:800;font-size:18px;letter-spacing:-.4px;color:#fff}
-  .brand .tag{font-size:12px;color:#9aa4c4;margin-top:1px}
-  .readout{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap;align-items:center}
-  .gauge{display:block;border-radius:var(--radius);padding:9px 16px;min-width:78px;
-    text-align:left;transition:.15s;cursor:pointer;border:1px solid transparent;
-    background:rgba(255,255,255,.07)}
-  .gauge:hover{background:rgba(255,255,255,.14);transform:translateY(-1px)}
-  .gauge .v{font-size:21px;font-weight:800;line-height:1;letter-spacing:-.5px;display:block;color:#fff}
-  .gauge .l{font-size:11px;color:#9aa4c4;font-weight:600;margin-top:5px;display:block}
-  .gauge.g-marked .v{color:#fbbf24}
-  .gauge.g-success .v{color:#34d399}
-  .gauge.g-rejected .v{color:#fb7185}
+  /* ---- header ---- */
+  header.top{background:var(--panel);border-bottom:1px solid var(--border)}
+  .top-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:16px 30px;max-width:1360px;margin:0 auto}
+  .brand{display:flex;align-items:baseline;gap:12px;text-decoration:none}
+  .mark{font:700 22px/1 var(--serif);color:var(--ink);transform:rotate(-8deg);display:inline-block}
+  .brand .name{font:600 26px/1 var(--serif);letter-spacing:-.4px;color:var(--ink)}
+  .brand .tag{font-size:13.5px;color:var(--ink-faint)}
+  .readout{display:flex;margin-left:auto;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .gauge{display:flex;align-items:baseline;gap:7px;padding:11px 18px;background:var(--panel);
+    border-left:1px solid var(--border);transition:background .15s}
+  .gauge:first-child{border-left:none}
+  .gauge:hover{background:var(--sunk)}
+  .gauge .v{font:600 17px/1 var(--serif)}
+  .gauge .l{font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:var(--ink-soft);font-weight:500}
+  .gauge.g-marked .v{color:var(--amber)}
+  .gauge.g-success .v{color:var(--green)}
+  .gauge.g-rejected .v{color:var(--red)}
 
-  main{max-width:1480px;margin:0 auto;padding:18px 20px 48px}
-  .flash{padding:13px 17px;border-radius:var(--radius);margin-bottom:16px;font-size:14px;
-    border:1px solid;font-weight:600}
+  main{max-width:1360px;margin:0 auto;padding:26px 30px 60px}
+  .flash{padding:13px 17px;border-radius:12px;margin-bottom:18px;font-size:14px;border:1px solid;font-weight:500}
   .flash.ok{background:var(--green-bg);border-color:var(--green-line);color:var(--green)}
   .flash.error{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
 
-  .split{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
-  @media(max-width:900px){.split{grid-template-columns:1fr}}
+  .split{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
+  @media(max-width:980px){.split{grid-template-columns:1fr}}
 
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;
-    box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -18px rgba(15,23,42,.25)}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius)}
   .panel + .panel{margin-top:18px}
-  .panel-h{padding:18px 19px 0}
-  .panel-h h2{margin:0;font-size:14px;font-weight:800;letter-spacing:-.2px}
-  .panel-h .sub{font-size:12.5px;color:var(--ink-faint);margin-top:5px;line-height:1.5}
-  .panel-b{padding:15px 19px 19px}
+  .panel-h{padding:26px 28px 0}
+  .panel-h h2{margin:0;font:600 25px/1.2 var(--serif);letter-spacing:-.3px}
+  .panel-h .sub{font-size:13.5px;color:var(--ink-soft);margin-top:9px;line-height:1.55}
+  .panel-b{padding:20px 28px 28px}
 
-  label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:700;margin:15px 0 6px}
+  label{display:block;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--ink-soft);font-weight:600;margin:20px 0 8px}
   label:first-child{margin-top:0}
-  input,textarea{width:100%;background:var(--panel);border:1px solid var(--border-strong);
-    color:var(--ink);border-radius:10px;padding:10px 12px;font:14.5px/1.4 var(--sans)}
-  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand);
-    box-shadow:0 0 0 3px var(--brand-bg)}
-  select{width:100%;background:var(--panel);border:1px solid var(--border-strong);color:var(--ink);
-    border-radius:10px;padding:10px 34px 10px 12px;font:14.5px/1.4 var(--sans);cursor:pointer;appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2.6'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right 12px center}
+  input,textarea,select{width:100%;background:var(--panel);border:1px solid var(--border-strong);
+    color:var(--ink);border-radius:10px;padding:13px 14px;font:15px/1.4 var(--sans)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+  select{cursor:pointer;appearance:none;padding-right:36px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b6a64' stroke-width='2.2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--brand);
-    color:#fff;border:none;border-radius:10px;padding:11px 16px;font:700 14px/1 var(--sans);
-    cursor:pointer;transition:background .15s,transform .1s;width:100%}
-  .btn:hover{background:var(--brand-hi);color:#fff}
-  .btn:active{transform:translateY(1px)}
-  .btn.sm{width:auto;padding:9px 14px;font-size:13px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);
+    color:#fff;border:none;border-radius:10px;padding:15px 18px;font:600 15px/1 var(--sans);
+    cursor:pointer;transition:background .15s;width:100%}
+  .btn:hover{background:var(--accent-hi);color:#fff}
+  .btn.sm{width:auto;padding:9px 14px;font-size:13px;border-radius:9px}
   .btn.ghost{background:var(--panel);border:1px solid var(--border-strong);color:var(--ink-soft)}
-  .btn.ghost:hover{background:var(--sunk2);color:var(--ink);border-color:var(--brand-line)}
+  .btn.ghost:hover{background:var(--sunk2);color:var(--ink)}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-  .hint{font-size:11px;color:var(--ink-faint);font-weight:500}
+  .hint{font-size:12px;color:var(--ink-faint)}
+  .note{font-size:12.5px;color:var(--ink-faint);text-align:center;margin-top:14px}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   {% block style %}{% endblock %}
@@ -113,15 +94,13 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="{{ url_for('index') }}">
-      <div class="logo">l</div>
-      <div>
-        <div class="name">leadgen</div>
-        <div class="tag">пошук клієнтів по Україні</div>
-      </div>
+      <span class="mark">L</span>
+      <span class="name">leadgen</span>
+      <span class="tag">пошук клієнтів по Україні</span>
     </a>
     <div class="readout">
       {% for code in ['marked','success','rejected'] %}
-        <a class="gauge g-{{ code }}" href="{{ url_for('index', status=code) }}" title="{{ KL[code] }}">
+        <a class="gauge g-{{ code }}" href="{{ url_for('index', status=code) }}">
           <span class="v">{{ status_counts.get(code, 0) if status_counts is defined else 0 }}</span>
           <span class="l">{{ KL[code] }}</span></a>
       {% endfor %}
