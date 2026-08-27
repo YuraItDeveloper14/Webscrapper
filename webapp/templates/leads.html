@@ -39,23 +39,34 @@
   .bulkbar{display:none;align-items:center;gap:10px;margin:14px 19px 0;padding:11px 14px;
     background:var(--sunk2);border:1px solid var(--border-strong);border-radius:11px;font-size:13.5px}
   .bulkbar.show{display:flex}
-  .scroll{overflow-x:auto;margin-top:12px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
+  .scroll{overflow-x:auto;margin-top:10px}
+  /* fixed layout keeps every column on screen; long values get an ellipsis */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}
+  col.c-chk{width:34px} col.c-name{width:19%} col.c-mail{width:19%}
+  col.c-phone{width:16%} col.c-opp{width:15%} col.c-cat{width:11%}
+  col.c-city{width:10%} col.c-status{width:118px}
+  tbody td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  tbody td .nm{display:inline-block;max-width:calc(100% - 34px);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
   thead th{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft);
     text-align:left;padding:11px 15px;background:var(--sunk);
     border-top:1px solid var(--border);border-bottom:1px solid var(--border);
     white-space:nowrap;cursor:pointer;user-select:none}
   thead th:hover{color:var(--brand)}
   thead th.nos{cursor:default}
-  tbody td{padding:11px 15px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody td{padding:7px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
   tbody tr:hover td{background:var(--sunk)}
-  .chk{width:38px;text-align:center;cursor:default}
+  .chk{width:32px;text-align:center;cursor:default;padding-left:12px}
   .nm{font-weight:700;color:var(--ink)}
-  .em a{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong)}
+  .pin,.soc{color:var(--ink-faint);font-size:13px;margin-left:5px;text-decoration:none}
+  .pin:hover,.soc:hover{color:var(--brand)}
+  .em a{color:var(--ink);font-weight:600;border-bottom:1px solid var(--border-strong);font-size:13px}
   .em .none,.ph .none{color:var(--ink-faint)}
-  .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap}
-  .pk{display:block;font-size:11px;font-weight:600;margin-top:3px}
-  .pk-mobile{color:var(--green)} .pk-landline{color:var(--ink-faint)}
+  .ph a{color:var(--ink-soft);font-weight:600;white-space:nowrap;font-size:13px}
+  /* the kind sits inline so a row stays one line tall */
+  .pk{font-size:10.5px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:5px;white-space:nowrap}
+  .pk-mobile{color:var(--green);background:var(--green-bg)}
+  .pk-landline{color:var(--ink-faint);background:var(--sunk2)}
   .cp{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;padding:0 4px;opacity:0;transition:.12s}
   tr:hover .cp{opacity:1} .cp:hover{color:var(--ink)}
   /* one hue per trade — a glance down the column separates the niches */
@@ -81,10 +92,12 @@
   .opp{display:inline-block;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;
     background:var(--sunk2);color:var(--ink);border:1px solid var(--border-strong)}
   .opp.has-site{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-line)}
-  .opp-angle{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
-  .verify{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--ink);
-    border-bottom:1.5px solid var(--ink)}
-  .verify:hover{color:var(--green);border-color:var(--green)}
+  .opp-angle{font-size:11px;color:var(--ink-faint);margin-left:6px}
+  /* one-tap Google check before dialling */
+  .verify{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+    margin-left:6px;border-radius:50%;font-size:11px;font-weight:800;color:#fff;
+    background:var(--brand);vertical-align:middle;text-decoration:none}
+  .verify:hover{background:var(--brand-hi);color:#fff}
 
   /* soft left-to-right "brushstroke" tint by status */
   tr.st-marked{background:linear-gradient(90deg, rgba(251,191,36,.30) 0%, rgba(251,191,36,.08) 26%, transparent 55%)}
@@ -104,8 +117,8 @@
   .actbtn:hover{border-color:var(--ink);color:var(--ink)} .actbtn.has{color:var(--ink);border-color:var(--ink)}
 
   .dd{position:relative;display:inline-block}
-  .dd-btn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border-strong);
-    border-radius:9px;padding:7px 11px;font:600 12.5px var(--sans);color:var(--ink);cursor:pointer;min-width:120px;justify-content:space-between}
+  .dd-btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border-strong);
+    border-radius:8px;padding:5px 9px;font:700 12px var(--sans);color:var(--ink);cursor:pointer;min-width:106px;justify-content:space-between}
   .dd-btn:hover{border-color:var(--ink)} .dd-btn .caret{width:11px;height:11px;opacity:.5}
   .dd-btn.st-marked{color:var(--yellow);border-color:var(--yellow-line);background:var(--yellow-bg)}
   .dd-btn.st-success{color:var(--green);border-color:var(--green-line);background:var(--green-bg)}
@@ -221,32 +234,34 @@
     </div>
     <div class="scroll">
     <table id="tbl">
+      <colgroup>
+        <col class="c-chk"><col class="c-name"><col class="c-mail"><col class="c-phone">
+        <col class="c-opp"><col class="c-cat"><col class="c-city"><col class="c-status">
+      </colgroup>
       <thead><tr>
         <th class="chk nos"><input type="checkbox" id="selAll" onclick="toggleAll(this)"></th>
         <th data-k="name">Заклад</th><th data-k="email">Email</th><th data-k="phone">Телефон</th>
-        <th data-k="opp">Шанс</th><th data-k="cat">Тип</th><th data-k="city">Місто</th>
-        <th class="nos">Мапа</th><th class="nos">Статус</th>
+        <th data-k="opp">Сайт</th><th data-k="cat">Тип</th><th data-k="city">Місто</th>
+        <th class="nos">Статус</th>
       </tr></thead>
       <tbody>
       {% for l in leads %}
         {% set o = opportunity(l) %}
         <tr data-id="{{ l.id }}" class="st-{{ l.email_status }}">
           <td class="chk"><input type="checkbox" class="rowchk" value="{{ l.id }}" onclick="onChk()"></td>
-          <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span>{% if l.social %}<br><a class="soc" href="{{ l.social }}" target="_blank" rel="noopener">соцмережі ↗</a>{% endif %}</td>
+          <td data-k="name"><span class="nm">{% if l.website %}<a href="{{ l.website }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</span><a class="pin" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener" title="Відкрити в Google Maps">◎</a>{% if l.social %} <a class="soc" href="{{ l.social }}" target="_blank" rel="noopener" title="Соцмережі">↗</a>{% endif %}</td>
           <td class="em" data-k="email">{% if l.email %}<a href="mailto:{{ l.email }}">{{ l.email }}</a><button class="cp" title="копіювати" onclick="cp('{{ l.email }}',this)">⧉</button>{% else %}<span class="none">—</span>{% endif %}</td>
           <td class="ph" data-k="phone">{% if l.phone %}<a href="tel:{{ l.phone|replace(' ','')|replace('(','')|replace(')','') }}">{{ l.phone }}</a>
             {% set pk = phone_kind(l.phone, l.country) %}
-            {% if pk %}<span class="pk pk-{{ pk }}">{{ 'мобільний' if pk=='mobile' else 'стаціонарний' }}</span>{% endif %}
+            {% if pk %}<span class="pk pk-{{ pk }}" title="{{ 'мобільний — трубку бере власник' if pk=='mobile' else 'стаціонарний — трубку бере рецепція' }}">{{ 'моб' if pk=='mobile' else 'стац' }}</span>{% endif %}
             {% elif l.social %}<a class="only-soc" href="{{ l.social }}" target="_blank" rel="noopener" title="Телефону немає — писати в дірект">✉ тільки соцмережі</a>
             {% else %}<span class="none">—</span>{% endif %}</td>
           <td data-k="opp" data-sort="{{ o.score }}">
-            <span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0] }}</span>
-            {% if not l.website %}<a class="verify" href="{{ check_url(l) }}" target="_blank" rel="noopener" title="Перевірити в Google, чи є в них сайт — перед дзвінком">перевірити ↗</a>
-            {% else %}<span class="opp-angle">{{ o.angle }}</span>{% endif %}
+            <span class="opp {{ 'has-site' if o.tier=='cold' }}">{{ o.reasons[0]|replace('сайт не вказано','не вказано')|replace('має робочий сайт','має сайт')|replace('лише соцмережа','соцмережа')|replace('не власний сайт','чужий сайт') }}</span>
+            {% if not l.website %}<a class="verify" href="{{ check_url(l) }}" target="_blank" rel="noopener" title="Перевірити в Google, чи є в них сайт — перед дзвінком">?</a>{% endif %}
           </td>
           <td data-k="cat">{% if l.category %}<a class="cat h-{{ category_hue(l.category) }}" href="{{ url_for('index', all=1, category=l.category, status=filters.status, opp=opp, **keep) }}" title="показати лише цей тип">{{ category_label(l.category) }}</a>{% else %}—{% endif %}</td>
           <td data-k="city">{% if l.city %}<a class="cityf" href="{{ url_for('index', all=1, city=l.city, category=filters.category, status=filters.status, opp=opp, **keep) }}" title="показати лише це місто">{{ l.city }}</a>{% else %}<span class="addr">{{ l.address or '—' }}</span>{% endif %}</td>
-          <td><a class="maps" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener">відкрити</a></td>
           <td style="white-space:nowrap">
             <div class="dd">
               <button class="dd-btn st-{{ l.email_status }}" onclick="ddToggle(this)">
@@ -257,7 +272,6 @@
                 {% for s in statuses %}<button class="dd-opt st-{{ s }}" onclick="ddPick({{ l.id }},'{{ s }}',this)"><span class="dot"></span>{{ LBL[s] }}</button>{% endfor %}
               </div>
             </div>
-            <button class="star {{ 'on' if l.email_status=='marked' }}" title="Позначити" onclick="toggleStar({{ l.id }},this)">{{ '★' if l.email_status=='marked' else '☆' }}</button>
           </td>
         </tr>
       {% else %}
@@ -326,7 +340,6 @@ function ddToggle(btn){const m=btn.nextElementSibling;
 function ddPick(id,st,opt){const dd=opt.closest('.dd'),btn=dd.querySelector('.dd-btn'),tr=dd.closest('tr');
   btn.className='dd-btn st-'+st; btn.querySelector('span').textContent=STN[st];
   tr.className='st-'+st; dd.querySelector('.dd-menu').classList.remove('open');openMenu=null;
-  const star=tr.querySelector('.star');if(star){const on=st==='marked';star.classList.toggle('on',on);star.textContent=on?'★':'☆';}
   fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st});}
 document.addEventListener('click',e=>{if(openMenu&&!e.target.closest('.dd')){openMenu.classList.remove('open');openMenu=null;}});
 window.addEventListener('scroll',()=>{if(openMenu){openMenu.classList.remove('open');openMenu=null;}},true);
@@ -336,12 +349,6 @@ function saveNote(id,ta){const nb=document.querySelector(`button.notebtn[onclick
   fetch(`/lead/${id}/note`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'note='+encodeURIComponent(ta.value)});}
 function cp(t,b){navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,900);});}
 const STN={new:'новий',marked:'позначення',success:'успішні',rejected:'відмова'};
-function toggleStar(id,btn){const on=btn.classList.toggle('on');btn.textContent=on?'★':'☆';
-  const st=on?'marked':'new';const tr=btn.closest('tr');tr.className='st-'+st;
-  const db=tr.querySelector('.dd-btn');if(db){db.className='dd-btn st-'+st;db.querySelector('span').textContent=STN[st];}
-  fetch(`/lead/${id}/status`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'status='+st});}
-function copyTemplate(btn,name){const msg=`Доброго дня! Звертаюся до «${name}». Переглянув ваш бізнес — можу зробити сучасний сайт, налаштувати рекламу та AI-автоматизацію, щоб було більше клієнтів. Зручно коротко розповісти?`;
-  navigator.clipboard.writeText(msg).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1000);});}
 
 function sel(){return [...document.querySelectorAll('.rowchk:checked')].map(c=>c.value);}
 function onChk(){const n=sel().length;document.getElementById('bulkCount').textContent=n;document.getElementById('bulkbar').classList.toggle('show',n>0);}
