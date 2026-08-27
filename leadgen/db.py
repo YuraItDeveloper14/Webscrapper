@@ -170,8 +170,11 @@ def _filter_conditions(search="", category="", status="", has_email="",
     conds = []
     if cat_key:  # the search that produced the lead (stored in `query`)
         conds.append(LEADS.c.query.like(cat_key + "%"))
-    if contactable:  # nothing to do with a business you cannot reach
-        conds.append(or_(_has(LEADS.c.email), _has(LEADS.c.phone), _has(LEADS.c.social)))
+    if contactable:
+        # He sells websites and works the phone, so a lead only counts when there
+        # is no site to compete with and a number to ring.
+        conds.append(_has(LEADS.c.phone))
+        conds.append(or_(LEADS.c.website.is_(None), LEADS.c.website == ""))
     if hide_done:  # already handled — they move to the Успішні / Відмови views
         conds.append(LEADS.c.email_status.notin_(("success", "rejected")))
     if search:

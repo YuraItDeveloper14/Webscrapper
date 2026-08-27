@@ -160,7 +160,7 @@
 
     {% set keepq = keep %}
     <div class="res-h">
-      <h2>{% if filters.status %}{{ {'marked':'Передзвонити','success':'Успішні','rejected':'Відмови'}[filters.status] }}{% elif opp %}Без сайту{% else %}До обдзвону{% endif %}
+      <h2>{% if filters.status %}{{ {'marked':'Позначені','success':'Успішні','rejected':'Відмови'}[filters.status] }}{% else %}До обдзвону{% endif %}
         <span class="n">{{ total }}</span></h2>
       <div class="sub">
         {%- if keep.r %}{{ keep.r }}{{ '' if keep.r.startswith('м.') else ' область' }}
@@ -170,9 +170,8 @@
     </div>
 
     <div class="chips">
-      <a class="chip {{ 'on' if not blank and not opp and not filters.status }}" href="{{ url_for('index', all=1, category=filters.category, **keepq) }}">До обдзвону</a>
-      <a class="chip {{ 'on' if opp=='weak' }}" href="{{ url_for('index', opp='weak', category=filters.category, **keepq) }}">Без сайту</a>
-      <a class="chip {{ 'on' if filters.status=='marked' }}" href="{{ url_for('index', status='marked', **keepq) }}">Передзвонити</a>
+      <a class="chip {{ 'on' if not blank and not filters.status }}" href="{{ url_for('index', all=1, category=filters.category, **keepq) }}">До обдзвону</a>
+      <a class="chip {{ 'on' if filters.status=='marked' }}" href="{{ url_for('index', status='marked', **keepq) }}">Позначені</a>
       <a class="chip {{ 'on' if filters.status=='success' }}" href="{{ url_for('index', status='success', **keepq) }}">Успішні</a>
       <a class="chip {{ 'on' if filters.status=='rejected' }}" href="{{ url_for('index', status='rejected', **keepq) }}">Відмови</a>
       {% if filters.category %}<a class="chip on" href="{{ url_for('index', all=1, city=filters.city, status=filters.status, opp=opp, **keepq) }}">{{ category_label(filters.category) }} ✕</a>{% endif %}
@@ -188,14 +187,10 @@
         <input name="search" value="{{ filters.search }}" placeholder="пошук за назвою або email…">
         {% if filters.search %}<a class="qs-x" href="{{ url_for('index', opp=opp, status=filters.status, **keepq) }}">✕</a>{% endif %}
       </form>
-      <form method="post" action="{{ url_for('verify', **request.args.to_dict()) }}" style="margin:0" class="grow">
-        <button class="btn ghost sm" type="submit" title="Знайти тих, у кого сайт насправді є">Перевірити сайти</button>
-      </form>
-      <a class="btn ghost sm" href="{{ url_for('export', **request.args.to_dict()) }}">Експорт</a>
     </div>
 
     <div class="bulkbar" id="bulkbar"><b id="bulkCount">0</b> обрано ·
-      <button class="btn ghost sm" type="button" onclick="bulk('marked')">Передзвонити</button>
+      <button class="btn ghost sm" type="button" onclick="bulk('marked')">Позначити</button>
       <button class="btn ghost sm" type="button" onclick="bulk('success')">Успіх</button>
       <button class="btn ghost sm" type="button" onclick="bulk('rejected')">Відмова</button>
       <button class="btn ghost sm" type="button" onclick="clearSel()">Зняти</button>
@@ -229,13 +224,15 @@
               {% if pk %}<span class="pk {{ pk }}">{{ 'моб' if pk=='mobile' else 'стац' }}</span>{% endif %}
             {% elif not l.email %}<span class="tel none">без телефону</span>{% endif %}
             {% if l.email %}<a class="mail" href="mailto:{{ l.email }}">{{ l.email }}</a>{% endif %}
-            <a class="pill" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener"><span class="o"></span>Google Maps</a>
-            {% if not l.website %}<a class="pill" href="{{ check_url(l) }}" target="_blank" rel="noopener" title="Перевірити, чи є в них сайт">сайт?</a>{% endif %}
+            {# Google Maps is the single source of truth before a call: it shows
+               the number, the street and whether a website exists at all #}
+            <a class="pill" href="{{ gmaps_url(l) }}" target="_blank" rel="noopener"
+               title="Картка бізнесу в Google Maps — телефон, адреса і сайт, якщо він є"><span class="o"></span>Google Maps</a>
             {% if l.social %}<a class="pill" href="{{ l.social }}" target="_blank" rel="noopener">соцмережі</a>{% endif %}
           </td>
           <td>
             <div class="acts">
-              {% for s, t in [('marked','Передзвонити'),('success','Успіх'),('rejected','Відмова')] %}
+              {% for s, t in [('marked','Позначити'),('success','Успіх'),('rejected','Відмова')] %}
                 <button class="act {{ 'on-' + s if l.email_status == s }}" data-s="{{ s }}"
                         onclick="setStatus({{ l.id }},'{{ s }}',this)">{{ t }}</button>
               {% endfor %}
@@ -246,7 +243,7 @@
         <tr><td colspan="4"><div class="empty">
           {% if stored %}
             <h3>Знайшлося {{ stored }}, але дзвонити нема кому</h3>
-            <p>У жодного не вказано ні телефону, ні пошти, ні соцмереж.</p>
+            <p>У списку лише ті, хто <b>без сайту й з телефоном</b>. Тут таких не виявилось — у решти або вже є сайт, або не вказано номер.</p>
           {% else %}
             <h3>Тут порожньо</h3>
             <p>За цим пошуком нікого не знайшлося. Спробуй іншу область або інший тип бізнесу.</p>

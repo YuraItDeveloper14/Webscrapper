@@ -34,8 +34,8 @@
   header.top{background:var(--panel);border-bottom:1px solid var(--border)}
   .top-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
     padding:16px 30px;max-width:1360px;margin:0 auto}
-  .brand{display:flex;align-items:baseline;gap:12px;text-decoration:none}
-  .mark{font:700 22px/1 var(--serif);color:var(--ink);transform:rotate(-8deg);display:inline-block}
+  .brand{display:flex;align-items:center;gap:11px;text-decoration:none}
+  .mark{width:27px;height:27px;color:var(--ink);flex:0 0 auto}
   .brand .name{font:600 26px/1 var(--serif);letter-spacing:-.4px;color:var(--ink)}
   .brand .tag{font-size:13.5px;color:var(--ink-faint)}
   .readout{display:flex;margin-left:auto;border:1px solid var(--border);border-radius:10px;overflow:hidden}
@@ -94,7 +94,10 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="{{ url_for('index') }}">
-      <span class="mark">L</span>
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M27 4 L14 12 L7 56 L45 56 L52 44 L21 44 L27 4 Z" fill="currentColor"/>
+        <path d="M31 26 L60 26 L49 38 L26 38 L31 26 Z" fill="currentColor"/>
+      </svg>
       <span class="name">leadgen</span>
       <span class="tag">пошук клієнтів по Україні</span>
     </a>
