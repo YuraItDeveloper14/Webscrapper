@@ -185,8 +185,13 @@ def index():
                                            hide_done=working, **filters)
     # when a search has rows but none are callable, say so instead of "nothing found"
     stored = db.count_leads(**filters) if (not blank and total == 0) else total
-    # refine the SQL ordering within the page: best sales targets first
-    leads.sort(key=lambda l: -opportunity(l)["score"])
+    # Mobiles first: that number rings the owner, a landline rings reception.
+    # Then whoever also left a mail, so a follow-up is possible.
+    leads.sort(key=lambda l: (
+        0 if phone_kind(l.get("phone"), l.get("country")) == "mobile" else 1,
+        0 if (l.get("email") or "").strip() else 1,
+        (l.get("name") or "").lower(),
+    ))
     return render_template(
         "leads.html",
         leads=leads,
