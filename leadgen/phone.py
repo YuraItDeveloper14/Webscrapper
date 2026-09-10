@@ -25,6 +25,8 @@ def _national(digits: str, cc: str) -> str:
     """Strip the country code / trunk zero, leaving the national number."""
     if digits.startswith(cc):
         return digits[len(cc):]
+    if cc == "380" and len(digits) == 11 and digits.startswith("80"):
+        return digits[2:]        # old long-distance "8 0XX ..." still printed in listings
     if digits.startswith("0"):
         return digits[1:]
     return digits
