@@ -1,7 +1,7 @@
 # leadgen — Google Maps → Email lead scraper
 
 <!-- badges -->
-[![License](https://img.shields.io/github/license/YuraItDeveloper14/Webscrapper?color=blue)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/YuraItDeveloper14/Webscrapper)](https://github.com/YuraItDeveloper14/Webscrapper/commits)
+[![CI](https://github.com/YuraItDeveloper14/Webscrapper/actions/workflows/tests.yml/badge.svg)](https://github.com/YuraItDeveloper14/Webscrapper/actions/workflows/tests.yml) [![License](https://img.shields.io/github/license/YuraItDeveloper14/Webscrapper?color=blue)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/YuraItDeveloper14/Webscrapper)](https://github.com/YuraItDeveloper14/Webscrapper/commits)
 
 **Live:** [leadgen-0bg6.onrender.com](https://leadgen-0bg6.onrender.com) — free Render instance, the first request can take up to a minute while it wakes.
 
