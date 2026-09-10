@@ -84,6 +84,20 @@ def candidate_domains(name: str, city: str = "") -> list[str]:
     return [f"{s}.{t}" for s in slugs for t in tlds][:MAX_DOMAINS]
 
 
+# A phone as printed: digits with spaces, dots, dashes or brackets between them.
+_PHONE_RUN = re.compile(r"\+?\d[\d\s().\-]{5,}\d")
+
+
+def page_has_phone(text: str, keys: set[str]) -> bool:
+    """True when one of the 7-digit keys appears inside a phone-shaped run.
+
+    Stripping every non-digit from the whole page first glued unrelated numbers
+    together ("067 12" + "34567" -> "...1234567") and produced false matches.
+    """
+    runs = [re.sub(r"\D", "", m) for m in _PHONE_RUN.findall(text or "")]
+    return any(k in digits for digits in runs for k in keys)
+
+
 def phone_keys(phone: str | None) -> set[str]:
     """Last 7 digits of every number listed — format-independent fingerprints."""
     keys = set()
@@ -123,7 +137,7 @@ async def find_site(client: httpx.AsyncClient, name: str, city: str,
                                      headers={"User-Agent": UA})
             except Exception:
                 continue
-            if r.status_code == 200 and any(k in re.sub(r"\D", "", r.text) for k in keys):
+            if r.status_code == 200 and page_has_phone(r.text, keys):
                 return scheme + domain
             break            # the domain answered; no need to try the other scheme
     return ""
