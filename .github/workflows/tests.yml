@@ -16,9 +16,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Модулі під тестом не ходять у мережу й базу; verify.py лише імпортує httpx.
+      # The modules under test never reach the network or a database;
+      # they only import httpx and selectolax.
       - name: Install test dependencies
-        run: pip install pytest httpx==0.27.2
+        run: pip install pytest httpx==0.27.2 selectolax==0.3.21
 
       - name: Unit tests
         run: python -m pytest -q tests
+
+      - name: Every module compiles
+        run: python -m compileall -q leadgen webapp run.py serve.py backfill_coords.py
