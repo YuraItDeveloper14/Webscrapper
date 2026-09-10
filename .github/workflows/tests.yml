@@ -16,10 +16,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      # The modules under test never reach the network or a database;
-      # they only import httpx and selectolax.
+      # Nothing here reaches the network; the panel test runs on a throwaway
+      # local SQLite file.
       - name: Install test dependencies
-        run: pip install pytest httpx==0.27.2 selectolax==0.3.21
+        run: pip install pytest httpx==0.27.2 selectolax==0.3.21 flask==3.0.3 SQLAlchemy==2.0.35
 
       - name: Unit tests
         run: python -m pytest -q tests
