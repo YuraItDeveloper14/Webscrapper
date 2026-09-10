@@ -3,6 +3,8 @@
 <!-- badges -->
 [![License](https://img.shields.io/github/license/YuraItDeveloper14/Webscrapper?color=blue)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/YuraItDeveloper14/Webscrapper)](https://github.com/YuraItDeveloper14/Webscrapper/commits)
 
+**Live:** [leadgen-0bg6.onrender.com](https://leadgen-0bg6.onrender.com) — free Render instance, the first request can take up to a minute while it wakes.
+
 Збирає бізнеси з Google Maps за пошуковим запитом, заходить на їхні сайти,
 витягує контактні email і складає все в базу (SQLite) з експортом у CSV/Excel.
 
