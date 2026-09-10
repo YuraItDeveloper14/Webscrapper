@@ -35,6 +35,21 @@ HEADERS = {
 }
 
 
+_SCHEME = re.compile(r"(?i)^https?://")
+# name=viewport, name='viewport' and name="viewport" are all valid HTML
+_VIEWPORT = re.compile(r"""<meta\b[^>]*\bname\s*=\s*["']?viewport\b""", re.I)
+
+
+def _with_scheme(website: str) -> str:
+    """Add https:// unless a scheme is already there ("httpie.io" is a host)."""
+    website = website.strip()
+    return website if _SCHEME.match(website) else "https://" + website
+
+
+def has_viewport(html: str) -> bool:
+    return bool(_VIEWPORT.search(html or ""))
+
+
 def _clean(emails: set[str]) -> list[str]:
     good = []
     for e in emails:
@@ -78,9 +93,7 @@ async def find_email(website: str, client: httpx.AsyncClient | None = None) -> s
     """Return the best-guess contact email for a website, or "" if none found."""
     if not website:
         return ""
-    if not website.startswith("http"):
-        website = "https://" + website
-    base = website.rstrip("/")
+    base = _with_scheme(website).rstrip("/")
     own_client = client is None
     if own_client:
         client = httpx.AsyncClient(headers=HEADERS)
@@ -104,14 +117,14 @@ async def find_email(website: str, client: httpx.AsyncClient | None = None) -> s
 
 async def probe_site(website: str, client: httpx.AsyncClient) -> dict:
     """Fetch a homepage once and report live signals + any emails on it."""
-    url = website if website.startswith("http") else "https://" + website
+    url = _with_scheme(website)
     out = {"site_ok": 0, "mobile": None, "emails": set()}
     try:
         r = await client.get(url, timeout=12, follow_redirects=True)
         if r.status_code == 200 and "text/html" in r.headers.get("content-type", ""):
             out["site_ok"] = 1
             html = r.text
-            out["mobile"] = 1 if 'name="viewport"' in html.lower() else 0
+            out["mobile"] = 1 if has_viewport(html) else 0
             out["emails"] = _emails_from_html(html)
     except Exception:
         pass
