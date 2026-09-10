@@ -11,7 +11,11 @@ Flow:  city name --(Nominatim)--> bbox --(Overpass)--> businesses
 from __future__ import annotations
 
 import asyncio
+import re
+
 import httpx
+
+from leadgen.score import host_matches
 
 HEADERS = {"User-Agent": "leadgen/1.0 (OSM lead research; contact via project owner)"}
 
@@ -125,13 +129,19 @@ def _social_link(t: dict) -> str:
     for key, base in (("contact:instagram", "https://instagram.com/"),
                       ("contact:facebook", "https://facebook.com/"),
                       ("contact:tiktok", "https://tiktok.com/@")):
-        v = t.get(key)
-        if v:
-            return v if v.startswith("http") else base + v.lstrip("@/")
+        v = (t.get(key) or "").strip()
+        if not v:
+            continue
+        if re.match(r"(?i)https?://", v):
+            return v
+        # "instagram.com/name" written without a scheme is a link, not a username
+        if base.split("/")[2] in v.lower():
+            return "https://" + v.lstrip("/")
+        return base + v.lstrip("@/")
     # sometimes the "website" tag is actually a social page
-    site = (t.get("website") or t.get("contact:website") or "").lower()
-    if any(h in site for h in _SOCIAL_HOSTS):
-        return t.get("website") or t.get("contact:website")
+    site = t.get("website") or t.get("contact:website") or ""
+    if host_matches(site, _SOCIAL_HOSTS):
+        return site
     return ""
 
 
