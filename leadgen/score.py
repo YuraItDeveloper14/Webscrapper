@@ -8,6 +8,8 @@ when the site was fetched (site_ok / mobile).
 """
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 SOCIAL = ("facebook.com", "instagram.com", "fb.com", "m.me", "t.me", "tiktok.com",
           "twitter.com", "x.com", "vk.com", "ok.ru", "youtube.com", "linktr.ee",
           "taplink", "linktr")
@@ -17,6 +19,61 @@ AGGREGATORS = ("bit.ly", "goo.gl", "cutt.ly", "choiceqr.com", "virtual.ua",
                "wixsite.com", "business.site", "н4.biz")
 
 TIERS = ("hot", "warm", "cold")
+
+
+def _host_path(url: str) -> tuple[str, str]:
+    u = (url or "").strip().lower()
+    if "://" not in u:
+        u = "http://" + u
+    try:
+        parts = urlsplit(u)
+    except ValueError:
+        return "", ""
+    host = parts.hostname or ""
+    if host.startswith("www."):
+        host = host[4:]
+    return host, parts.path or ""
+
+
+def host_matches(url: str, tokens) -> bool:
+    """True when the URL's host is one of `tokens` or a subdomain of one.
+
+    Matching the whole URL string misfired: "x.com" sits inside "dropbox.com",
+    "t.me" inside "mart.med.ua", "ok.ru" inside "book.ru". A token may carry a
+    path ("google.com/maps"); a token without a dot ("taplink") is a brand
+    fragment and is looked for anywhere in the host.
+    """
+    host, path = _host_path(url)
+    if not host:
+        return False
+    for tok in tokens:
+        if "/" in tok:
+            t_host, t_path = tok.split("/", 1)
+            if (host == t_host or host.endswith("." + t_host)) \
+                    and path.lstrip("/").startswith(t_path):
+                return True
+        elif "." in tok:
+            if host == tok or host.endswith("." + tok):
+                return True
+        elif tok in host:
+            return True
+    return False
+
+
+def like_patterns(tokens) -> list[str]:
+    """SQL LIKE patterns that pick the same hosts as `host_matches`.
+
+    Ports and query-only URLs ("https://t.me?x") are the rare cases left out.
+    """
+    out: list[str] = []
+    for tok in tokens:
+        if "/" in tok:
+            out += [f"{tok}%", f"%://{tok}%", f"%.{tok}%"]
+        elif "." in tok:
+            out += [tok, f"{tok}/%", f"%://{tok}", f"%://{tok}/%", f"%.{tok}", f"%.{tok}/%"]
+        else:
+            out.append(f"%{tok}%")
+    return out
 
 
 def opportunity(lead: dict) -> dict:
@@ -32,11 +89,11 @@ def opportunity(lead: dict) -> dict:
         # is embarrassing, so the UI offers a one-click check instead.
         reasons.append("сайт не вказано")
         angle = "перевір і пропонуй сайт"
-    elif any(s in w for s in SOCIAL):
+    elif host_matches(w, SOCIAL):
         score += 45
         reasons.append("лише соцмережа")
         angle = "сайт + реклама"
-    elif any(a in w for a in AGGREGATORS):
+    elif host_matches(w, AGGREGATORS):
         score += 42
         reasons.append("не власний сайт")
         angle = "власний сайт"

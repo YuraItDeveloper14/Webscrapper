@@ -360,11 +360,12 @@ def distinct_categories() -> list[str]:
 
 
 def _prospect_condition():
-    from leadgen.score import SOCIAL, AGGREGATORS
+    from leadgen.score import SOCIAL, AGGREGATORS, like_patterns
     weak = [LEADS.c.website.is_(None), LEADS.c.website == "",
             LEADS.c.website.ilike("http://%")]
-    for token in (*SOCIAL, *AGGREGATORS):
-        weak.append(LEADS.c.website.ilike(f"%{token}%"))
+    # host-aware patterns: a bare "%t.me%" also caught real sites like mart.med.ua
+    for pattern in like_patterns((*SOCIAL, *AGGREGATORS)):
+        weak.append(LEADS.c.website.ilike(pattern))
     return or_(*weak)
 
 
