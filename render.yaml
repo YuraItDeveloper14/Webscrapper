@@ -20,3 +20,5 @@ services:
         fromDatabase:
           name: leadgen-db
           property: connectionString
+      - key: PANEL_PASSWORD
+        sync: false          # set the value in the dashboard, never in git

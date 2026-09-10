@@ -17,6 +17,7 @@ import threading
 import time
 import io
 import csv
+import hmac
 from pathlib import Path
 
 from flask import (Flask, render_template, request, redirect, url_for,
@@ -38,6 +39,23 @@ from leadgen.phone import phone_kind
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "leadgen-local-panel")
 app.json.sort_keys = False  # preserve curated geo order (big cities first)
+
+
+@app.before_request
+def _require_password():
+    """Ask for a password when PANEL_PASSWORD is set (Render -> Environment).
+
+    Without the variable the panel stays open, as it always has been locally.
+    The login name can be anything; only the password is checked.
+    """
+    expected = os.environ.get("PANEL_PASSWORD", "")
+    if not expected:
+        return None
+    auth = request.authorization
+    if auth and hmac.compare_digest((auth.password or "").encode(), expected.encode()):
+        return None
+    return Response("Потрібен пароль.", 401,
+                    {"WWW-Authenticate": 'Basic realm="leadgen", charset="UTF-8"'})
 
 # ---- background job registry -------------------------------------------------
 JOBS: dict[int, dict] = {}
